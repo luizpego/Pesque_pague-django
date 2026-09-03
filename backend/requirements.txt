@@ -8,5 +8,5 @@ mercadopago==2.2.1
 gunicorn==22.0.0
 whitenoise==6.7.0
 dj-database-url==2.2.0
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.9
 requests==2.32.5
