@@ -2,6 +2,7 @@ services:
   - type: web
     name: pesque-pague-api
     env: python
+    plan: free
     rootDir: backend
     buildCommand: bash build.sh
     startCommand: gunicorn pescapague.wsgi:application --bind 0.0.0.0:$PORT
