@@ -392,10 +392,6 @@ ol {
   padding: 0 0.35rem;
 }
 
-.navbar-botao-menu {
-  display: none;
-}
-
 .icon-button {
   display: inline-grid;
   width: 2.55rem;
@@ -425,6 +421,10 @@ ol {
 
 .icon-button.danger {
   color: var(--color-danger);
+}
+
+.navbar-botao-menu.icon-button {
+  display: none;
 }
 
 .rodape {
