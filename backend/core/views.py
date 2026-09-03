@@ -160,7 +160,7 @@ class CategoriaCardapioViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated()]
+            return [permissions.AllowAny()]
         return [EhStaffOperacional()]
 
 
@@ -170,7 +170,7 @@ class ItemCardapioViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated()]
+            return [permissions.AllowAny()]
         return [EhStaffOperacional()]
 
     def get_queryset(self):
@@ -189,7 +189,7 @@ class MesaViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [permissions.IsAuthenticated()]
+            return [permissions.AllowAny()]
         return [EhStaffOperacional()]
 
 
