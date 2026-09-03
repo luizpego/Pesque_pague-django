@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import PermissionDenied
 
 from .models import CategoriaCardapio, Comanda, ItemCardapio, ItemComanda, Mesa, Pagamento
 from .pagamentos import MercadoPagoNaoConfiguradoError, atualizar_status_pagamento, criar_pagamento_pix
@@ -24,6 +25,11 @@ from .serializers import (
 )
 
 Usuario = get_user_model()
+
+
+def exigir_pedidos_ativos():
+    if not settings.ORDERS_ENABLED:
+        raise PermissionDenied("Pedidos e pagamentos ainda não estão liberados neste site.")
 
 
 class RegistroView(generics.CreateAPIView):
@@ -207,11 +213,13 @@ class ComandaViewSet(viewsets.ModelViewSet):
         return qs.filter(cliente=user)
 
     def perform_create(self, serializer):
+        exigir_pedidos_ativos()
         serializer.save(cliente=self.request.user)
 
     @action(detail=True, methods=["post"])
     def adicionar_item(self, request, pk=None):
         """Adiciona um item ao carrinho (cria ou soma quantidade se já existir)."""
+        exigir_pedidos_ativos()
         comanda = self.get_object()
         item_cardapio_id = request.data.get("item_cardapio")
         quantidade = request.data.get("quantidade", 1)
@@ -239,6 +247,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="remover_item/(?P<item_id>[^/.]+)")
     def remover_item(self, request, pk=None, item_id=None):
+        exigir_pedidos_ativos()
         comanda = self.get_object()
         ItemComanda.objects.filter(pk=item_id, comanda=comanda).delete()
         return Response(ComandaSerializer(comanda).data, status=status.HTTP_200_OK)
@@ -246,6 +255,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def alterar_status(self, request, pk=None):
         """Muda o status da comanda (ex.: enviar para cozinha, marcar como paga)."""
+        exigir_pedidos_ativos()
         comanda = self.get_object()
         novo_status = request.data.get("status")
         valores_validos = dict(Comanda.Status.choices)
@@ -270,6 +280,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def gerar_pagamento(self, request, pk=None):
         """Gera uma cobrança Pix (QR Code) no Mercado Pago para o total da comanda."""
+        exigir_pedidos_ativos()
         comanda = self.get_object()
 
         if comanda.pago:
@@ -334,11 +345,10 @@ class ItemComandaViewSet(viewsets.ModelViewSet):
         return qs.filter(comanda__cliente=user)
 
     def perform_create(self, serializer):
+        exigir_pedidos_ativos()
         comanda = serializer.validated_data["comanda"]
         user = self.request.user
         if not (user.is_superuser or user.is_staff_operacional or comanda.cliente_id == user.id):
-            from rest_framework.exceptions import PermissionDenied
-
             raise PermissionDenied("Você não pode adicionar itens a esta comanda.")
         serializer.save()
 

@@ -179,3 +179,6 @@ MERCADO_PAGO_WEBHOOK_URL = config("MERCADO_PAGO_WEBHOOK_URL", default="")
 # --------------------------------------------------------------------------
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET", default="")
+
+# Mantem pedidos e pagamentos bloqueados ate a loja estar oficialmente aberta.
+ORDERS_ENABLED = config("ORDERS_ENABLED", default=False, cast=bool)
