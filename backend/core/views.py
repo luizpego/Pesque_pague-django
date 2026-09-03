@@ -333,6 +333,15 @@ class ItemComandaViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(comanda__cliente=user)
 
+    def perform_create(self, serializer):
+        comanda = serializer.validated_data["comanda"]
+        user = self.request.user
+        if not (user.is_superuser or user.is_staff_operacional or comanda.cliente_id == user.id):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("Você não pode adicionar itens a esta comanda.")
+        serializer.save()
+
 
 class WebhookMercadoPagoView(APIView):
     """

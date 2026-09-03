@@ -89,7 +89,7 @@ class ComandaSerializer(serializers.ModelSerializer):
             "observacoes", "criada_em", "atualizada_em", "itens", "total",
             "pago", "pago_em", "pagamento_atual",
         ]
-        read_only_fields = ["cliente", "pago", "pago_em"]
+        read_only_fields = ["cliente", "status", "pago", "pago_em"]
 
     def get_pagamento_atual(self, obj):
         pagamento = obj.pagamentos.order_by("-criado_em").first()
