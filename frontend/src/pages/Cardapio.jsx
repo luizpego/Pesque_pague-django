@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Fish, RefreshCcw, Search, Table2, Utensils } from "lucide-react";
+import { Fish, Search, LogIn, Utensils } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import CardapioSkeleton from "../components/CardapioSkeleton.jsx";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import ItemCardapioCard from "../components/ItemCardapioCard.jsx";
 import PageHeader from "../components/PageHeader.jsx";
-import Spinner from "../components/Spinner.jsx";
-import { useCart } from "../context/CartContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 function CategoriaIcone({ nome }) {
   return String(nome || "").toLowerCase().includes("peixe") ? (
@@ -17,7 +18,8 @@ function CategoriaIcone({ nome }) {
 }
 
 export default function Cardapio() {
-  const { comanda, abrirComanda, adicionarItem, processando } = useCart();
+  const { estaAutenticado } = useAuth();
+  const navigate = useNavigate();
   const [categorias, setCategorias] = useState([]);
   const [itens, setItens] = useState([]);
   const [mesas, setMesas] = useState([]);
@@ -26,19 +28,24 @@ export default function Cardapio() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
+  const [pedidosHabilitados, setPedidosHabilitados] = useState(true);
 
   async function carregarDados() {
     setCarregando(true);
     setErro("");
-    Promise.all([
+    const requisicoes = [
       api.get("/categorias/"),
       api.get("/cardapio/", { params: { disponivel: "true" } }),
-      api.get("/mesas/"),
-    ])
-      .then(([resCategorias, resItens, resMesas]) => {
+      api.get("/conteudo-publico/"),
+    ];
+    if (estaAutenticado) requisicoes.push(api.get("/mesas/"));
+
+    Promise.all(requisicoes)
+      .then(([resCategorias, resItens, resPublico, resMesas]) => {
         setCategorias(resCategorias.data.results ?? resCategorias.data);
         setItens(resItens.data.results ?? resItens.data);
-        setMesas((resMesas.data.results ?? resMesas.data).filter((m) => m.ativa));
+        setPedidosHabilitados(resPublico.data.pedidos_habilitados !== false);
+        setMesas(resMesas ? (resMesas.data.results ?? resMesas.data).filter((m) => m.ativa) : []);
       })
       .catch(() => setErro("Não foi possível carregar cardápio e mesas agora."))
       .finally(() => setCarregando(false));
@@ -46,7 +53,7 @@ export default function Cardapio() {
 
   useEffect(() => {
     carregarDados();
-  }, []);
+  }, [estaAutenticado]);
 
   const termoBusca = busca.trim().toLowerCase();
   const itensFiltrados = categoriaAtiva
@@ -60,18 +67,48 @@ export default function Cardapio() {
       )
     : itensFiltrados;
 
-  async function selecionarMesa(e) {
+  async function abrirComandaMesa(e) {
     e.preventDefault();
-    if (!mesaEscolhida) return;
-    await abrirComanda(Number(mesaEscolhida));
+    if (!mesaEscolhida || !estaAutenticado) return;
+    try {
+      const { data } = await api.post("/api/comandas/", { mesa: Number(mesaEscolhida) });
+      navigate("/cardapio");
+    } catch (e) {
+      setErro("Não foi possível abrir a comanda. Por favor, faça login primeiro.");
+    }
+  }
+
+  function formatarMsgAcesso() {
+    if (!pedidosHabilitados) {
+      return (
+        <div className="mensagem-aviso" role="status">
+          O cardápio está disponível para consulta, mas novos pedidos estão pausados no momento.
+        </div>
+      );
+    }
+    if (!estaAutenticado) {
+      return (
+        <aside className="public-order-notice">
+          <div>
+            <LogIn size={20} aria-hidden="true" />
+            <span><strong>Quer fazer um pedido?</strong> Entre apenas quando estiver pronto para abrir sua comanda.</span>
+          </div>
+          <div>
+            <Link className="botao botao-secundario" to="/entrar?next=/cardapio">Entrar</Link>
+            <Link className="botao botao-fantasma" to="/cadastro">Criar conta</Link>
+          </div>
+        </aside>
+      );
+    }
+    return null;
   }
 
   return (
     <div className="catalog-page">
       <PageHeader
-        etiqueta="Cardápio digital"
-        titulo="Escolha com calma. A cozinha recebe tudo organizado."
-        descricao="Filtre pratos, informe sua mesa e monte a comanda com quantidades e observações."
+        etiqueta="Cardápio do restaurante"
+        titulo="Escolha pratos, porções e bebidas sem precisar entrar."
+        descricao="Consulte preços e disponibilidade. Para enviar um pedido, identifique-se somente na etapa da comanda."
         acoes={
           <button type="button" className="botao botao-fantasma" onClick={carregarDados} disabled={carregando}>
             <RefreshCcw size={16} aria-hidden="true" />
@@ -80,43 +117,36 @@ export default function Cardapio() {
         }
       />
 
-      {!comanda && (
-        <form onSubmit={selecionarMesa} className="mesa-panel" aria-label="Selecionar mesa">
-          <div className="mesa-panel-copy">
-            <span className="panel-icon"><Table2 size={20} aria-hidden="true" /></span>
-            <div>
-              <h2>Primeiro, escolha sua mesa</h2>
-              <p>A comanda fica vinculada ao seu atendimento durante toda a visita.</p>
-            </div>
-          </div>
-          <div className="mesa-panel-form">
-            <label htmlFor="mesa">Mesa ou ponto de pesca</label>
-            <select
-              id="mesa"
-              value={mesaEscolhida}
-              onChange={(e) => setMesaEscolhida(e.target.value)}
-              required
-            >
-              <option value="">Selecione a mesa...</option>
-              {mesas.map((m) => (
-                <option key={m.id} value={m.id}>
-                  Mesa {m.numero} {m.localizacao ? `- ${m.localizacao}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-          <button type="submit" className="botao botao-primario" disabled={processando || !mesaEscolhida}>
-            {processando ? <Spinner claro rotulo="Abrindo comanda" /> : "Abrir comanda"}
-          </button>
-        </form>
-      )}
+      {formatarMsgAcesso()}
 
-      {comanda && (
-        <div className="mensagem-sucesso order-notice" role="status">
-          <CheckCircle2 size={18} aria-hidden="true" />
-          <span>Comanda aberta na Mesa {comanda.mesa_numero}. Pode adicionar seus itens.</span>
+      <form id="selecao-mesa" onSubmit={abrirComandaMesa} className="mesa-panel" aria-label="Selecionar mesa">
+        <div className="mesa-panel-copy">
+          <span className="panel-icon"><Table2 size={20} aria-hidden="true" /></span>
+          <div>
+            <h2>Primeiro, escolha sua mesa</h2>
+            <p>A comanda fica vinculada ao seu atendimento durante toda a visita.</p>
+          </div>
         </div>
-      )}
+        <div className="mesa-panel-form">
+          <label htmlFor="mesa">Mesa ou ponto de pesca</label>
+          <select
+            id="mesa"
+            value={mesaEscolhida}
+            onChange={(e) => setMesaEscolhida(e.target.value)}
+            required
+          >
+            <option value="">Selecione a mesa...</option>
+            {mesas.map((m) => (
+              <option key={m.id} value={m.id}>
+                Mesa {m.numero} {m.localizacao ? `- ${m.localizacao}` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" className="botao botao-primario" disabled={carregando}>
+          {carregando ? "Carregando..." : "Abrir comanda"}
+        </button>
+      </form>
 
       {carregando ? (
         <CardapioSkeleton />
@@ -180,7 +210,15 @@ export default function Cardapio() {
             <div className="grade-cardapio" role="list">
               {itensVisiveis.map((item) => (
                 <div role="listitem" key={item.id}>
-                  <ItemCardapioCard item={item} aoAdicionar={adicionarItem} />
+                  <ItemCardapioCard
+                    item={item}
+                    textoAcaoIndisponivel={
+                      !estaAutenticado
+                        ? "Entrar para pedir"
+                        : "Escolha sua mesa acima"
+                    }
+                    linkAcao={!estaAutenticado ? "/entrar?next=/cardapio" : null}
+                  />
                 </div>
               ))}
             </div>

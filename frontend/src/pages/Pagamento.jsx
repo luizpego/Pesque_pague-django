@@ -56,7 +56,7 @@ export default function Pagamento() {
     } catch (e) {
       setErro(
         e.response?.data?.detalhe ||
-          "Não foi possível gerar o pagamento Pix agora. Tente novamente em instantes."
+          "Não foi possível gerar o pagamento Pix agora. O pagamento será realizado presencialmente no estabelecimento."
       );
     } finally {
       setCarregando(false);
@@ -104,8 +104,8 @@ export default function Pagamento() {
     <div className="payment-page">
       <PageHeader
         etiqueta={`Mesa ${comanda.mesa_numero}`}
-        titulo="Pagamento via Pix"
-        descricao="Gere o QR Code pelo Mercado Pago e acompanhe a confirmação automaticamente."
+        titulo="Pagamento"
+        descricao="O pagamento será realizado presencialmente no estabelecimento. Gerar QR Code apenas para consulta."
         acoes={<strong className="payment-total">{formatadorMoeda.format(comanda.total)}</strong>}
       />
 
@@ -114,8 +114,8 @@ export default function Pagamento() {
           <div className="payment-card-head">
             <span className="panel-icon"><QrCode size={22} aria-hidden="true" /></span>
             <div>
-              <h2>QR Code Pix</h2>
-              <p>O código fica vinculado à comanda #{comanda.id}.</p>
+              <h2>QR Code Pix (consulta)</h2>
+              <p>O código fica vinculado à comanda #{comanda.id}. O pagamento é presencial.</p>
             </div>
           </div>
 
@@ -133,7 +133,7 @@ export default function Pagamento() {
 
               {pagamento.status === "approved" && (
                 <div className="mensagem-sucesso" role="status">
-                  <p>Pagamento aprovado. Obrigado pela visita ao Pesque &amp; Pague.</p>
+                  <p>Pagamento aprovado. Obrigado pela visita ao Pesque & Pague.</p>
                   <Link className="botao botao-primario" to="/minhas-comandas">
                     Ver minhas comandas
                   </Link>
@@ -195,6 +195,9 @@ export default function Pagamento() {
           <div><span>Mesa</span><strong>{comanda.mesa_numero}</strong></div>
           <div><span>Comanda</span><strong>#{comanda.id}</strong></div>
           <div><span>Total</span><strong>{formatadorMoeda.format(comanda.total)}</strong></div>
+          <p className="payment-note">
+            Pagamento a ser acertado diretamente no estabelecimento.
+          </p>
           <button type="button" className="botao botao-fantasma botao-bloco" onClick={() => navigate("/carrinho")}>
             <ArrowLeft size={17} aria-hidden="true" />
             Voltar ao carrinho

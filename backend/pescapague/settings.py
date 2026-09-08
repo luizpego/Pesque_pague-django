@@ -173,6 +173,7 @@ MERCADO_PAGO_ACCESS_TOKEN = config("MERCADO_PAGO_ACCESS_TOKEN", default="")
 # ou exponha o servidor com uma ferramenta como ngrok e informe a URL aqui,
 # ex.: https://SEU-SUBDOMINIO.ngrok.app/api/pagamentos/webhook/
 MERCADO_PAGO_WEBHOOK_URL = config("MERCADO_PAGO_WEBHOOK_URL", default="")
+MERCADO_PAGO_WEBHOOK_SECRET = config("MERCADO_PAGO_WEBHOOK_SECRET", default="")
 
 # --------------------------------------------------------------------------
 # Google Login (Google Identity Services - authorization code flow)
@@ -180,5 +181,6 @@ MERCADO_PAGO_WEBHOOK_URL = config("MERCADO_PAGO_WEBHOOK_URL", default="")
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET", default="")
 
-# Mantem pedidos e pagamentos bloqueados ate a loja estar oficialmente aberta.
-ORDERS_ENABLED = config("ORDERS_ENABLED", default=False, cast=bool)
+# Pedidos presenciais e pagamentos online são recursos independentes.
+ORDERS_ENABLED = config("ORDERS_ENABLED", default=True, cast=bool)
+ONLINE_PAYMENTS_ENABLED = config("ONLINE_PAYMENTS_ENABLED", default=False, cast=bool)
