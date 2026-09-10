@@ -3,12 +3,15 @@ import { ArrowLeft, CreditCard, Fish, Send, Trash2 } from "lucide-react";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import PrintButton from "../components/PrintButton.jsx";
 import QuantitySelector from "../components/QuantitySelector.jsx";
 import Spinner from "../components/Spinner.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import { formatadorMoeda } from "../utils/formatters.js";
 import { useState } from "react";
+
+const PAGAMENTO_ONLINE_ATIVO = import.meta.env.VITE_ONLINE_PAYMENTS_ENABLED === "true";
 
 export default function Carrinho() {
   const { comanda, removerItem, atualizarQuantidade, enviarParaCozinha, processando } = useCart();
@@ -60,7 +63,7 @@ export default function Carrinho() {
       <PageHeader
         etiqueta={`Mesa ${comanda.mesa_numero}`}
         titulo={`Comanda #${comanda.id}`}
-        descricao="Revise itens, quantidades e subtotais antes de enviar para a cozinha ou gerar o Pix."
+        descricao="Revise itens, quantidades e observações antes de enviar para a cozinha. O acerto é presencial."
         acoes={<StatusBadge status={comanda.status} />}
       />
 
@@ -118,21 +121,26 @@ export default function Carrinho() {
             <strong>{formatadorMoeda.format(comanda.total)}</strong>
           </div>
 
-          {comanda.pago ? (
-            <p className="mensagem-sucesso" role="status">
-              Comanda paga. Obrigado pela visita!
-            </p>
-          ) : (
-            comanda.itens.length > 0 && (
-              <button
-                type="button"
-                className="botao botao-primario botao-bloco"
-                onClick={() => navigate("/pagamento")}
-              >
-                <CreditCard size={17} aria-hidden="true" />
-                Pagar com Pix
-              </button>
-            )
+          {PAGAMENTO_ONLINE_ATIVO && !comanda.pago && comanda.itens.length > 0 && (
+            <button
+              type="button"
+              className="botao botao-primario botao-bloco"
+              onClick={() => navigate("/pagamento")}
+            >
+              <CreditCard size={17} aria-hidden="true" />
+              Pagar online
+            </button>
+          )}
+
+          <p className="summary-note">O pagamento desta comanda será feito no estabelecimento.</p>
+
+          {comanda.itens.length > 0 && (
+            <PrintButton
+              origem="comanda"
+              origemId={comanda.id}
+              tipoDocumento="comanda_cliente"
+              rotulo="Visualizar para impressão"
+            />
           )}
 
           {comanda.status === "aberta" ? (

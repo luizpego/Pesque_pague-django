@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { BadgeCheck, Clock3, PlusCircle } from "lucide-react";
+import { BadgeCheck, Clock3, LogIn, PlusCircle } from "lucide-react";
+import { Link } from "react-router-dom";
 import QuantitySelector from "./QuantitySelector.jsx";
 import Spinner from "./Spinner.jsx";
 import { formatadorMoeda } from "../utils/formatters.js";
@@ -12,7 +13,13 @@ function resolverImagem(src) {
   return `${origem}${src}`;
 }
 
-export default function ItemCardapioCard({ item, aoAdicionar }) {
+export default function ItemCardapioCard({
+  item,
+  aoAdicionar,
+  podeAdicionar = true,
+  textoAcaoIndisponivel = "Indisponível para pedido",
+  linkAcao = null,
+}) {
   const [quantidade, setQuantidade] = useState(1);
   const [observacoes, setObservacoes] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -61,30 +68,43 @@ export default function ItemCardapioCard({ item, aoAdicionar }) {
         </p>
       </div>
 
-      <form onSubmit={submeter}>
-        <div className="menu-card-controls">
-          <QuantitySelector
-            id={`quantidade-${item.id}`}
-            label={`quantidade de ${item.nome}`}
-            value={quantidade}
-            onChange={setQuantidade}
-            disabled={enviando}
-          />
-          <div className="form-grupo compact">
-            <label htmlFor={`observacoes-${item.id}`}>Observação</label>
-            <input
-              id={`observacoes-${item.id}`}
-              value={observacoes}
-              maxLength={200}
-              placeholder="Ex.: sem cebola"
-              onChange={(event) => setObservacoes(event.target.value)}
+      {podeAdicionar ? (
+        <form onSubmit={submeter}>
+          <div className="menu-card-controls">
+            <QuantitySelector
+              id={`quantidade-${item.id}`}
+              label={`quantidade de ${item.nome}`}
+              value={quantidade}
+              onChange={setQuantidade}
+              disabled={enviando}
             />
+            <div className="form-grupo compact">
+              <label htmlFor={`observacoes-${item.id}`}>Observação</label>
+              <input
+                id={`observacoes-${item.id}`}
+                value={observacoes}
+                maxLength={200}
+                placeholder="Ex.: sem cebola"
+                onChange={(event) => setObservacoes(event.target.value)}
+              />
+            </div>
           </div>
+          <button type="submit" className="botao botao-primario botao-bloco" disabled={enviando}>
+            {enviando ? <Spinner claro rotulo="Adicionando" /> : <><PlusCircle size={17} aria-hidden="true" />Adicionar</>}
+          </button>
+        </form>
+      ) : (
+        <div className="menu-card-unavailable">
+          {linkAcao ? (
+            <Link className="botao botao-secundario botao-bloco" to={linkAcao}>
+              <LogIn size={17} aria-hidden="true" />
+              {textoAcaoIndisponivel}
+            </Link>
+          ) : (
+            <span>{textoAcaoIndisponivel}</span>
+          )}
         </div>
-        <button type="submit" className="botao botao-primario botao-bloco" disabled={enviando}>
-          {enviando ? <Spinner claro rotulo="Adicionando" /> : <><PlusCircle size={17} aria-hidden="true" />Adicionar</>}
-        </button>
-      </form>
+      )}
     </article>
   );
 }

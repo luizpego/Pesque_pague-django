@@ -4,20 +4,27 @@ Configurações do projeto Pesque & Pague.
 Sistema de comandas para restaurante do tipo "pesque e pague".
 """
 from datetime import timedelta
+import os
 from pathlib import Path
 import dj_database_url
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+DEBUG = config("DEBUG", default=True, cast=bool)
 
 SECRET_KEY = config(
     "SECRET_KEY",
     default="django-insecure-troque-esta-chave-em-producao-pesque-pague-2026",
 )
-
-DEBUG = config("DEBUG", default=True, cast=bool)
+if not DEBUG and SECRET_KEY.startswith("django-insecure-"):
+    raise ImproperlyConfigured("Defina uma SECRET_KEY segura antes de iniciar em produção.")
 
 ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1", cast=Csv())
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # --------------------------------------------------------------------------
 # Apps
@@ -123,6 +130,17 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "600/hour",
+        "user": "5000/hour",
+        "auth": "10/minute",
+        "token_refresh": "30/minute",
+    },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
 }
@@ -146,6 +164,11 @@ CORS_ALLOW_CREDENTIALS = True
 # problemas de CORS ao testar em portas/hosts diferentes. Em produção
 # (DEBUG=False), só as origens listadas acima são permitidas.
 CORS_ALLOW_ALL_ORIGINS = DEBUG
+CSRF_TRUSTED_ORIGINS = config(
+    "CSRF_TRUSTED_ORIGINS",
+    default="http://localhost:5173,http://127.0.0.1:5173",
+    cast=Csv(),
+)
 
 # --------------------------------------------------------------------------
 # Segurança em produção
@@ -155,6 +178,9 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
@@ -180,6 +206,11 @@ MERCADO_PAGO_WEBHOOK_SECRET = config("MERCADO_PAGO_WEBHOOK_SECRET", default="")
 # --------------------------------------------------------------------------
 GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
 GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET", default="")
+GOOGLE_ALLOWED_ORIGINS = config(
+    "GOOGLE_ALLOWED_ORIGINS",
+    default="http://localhost:5173,http://127.0.0.1:5173",
+    cast=Csv(),
+)
 
 # Pedidos presenciais e pagamentos online são recursos independentes.
 ORDERS_ENABLED = config("ORDERS_ENABLED", default=True, cast=bool)

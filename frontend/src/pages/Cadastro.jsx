@@ -70,7 +70,7 @@ export default function Cadastro() {
         <h1>Crie sua conta para pedir com tranquilidade.</h1>
         <p>
           O cadastro mantém histórico de comandas, preferências de acessibilidade
-          e acesso ao pagamento quando configurado.
+          e a identificação da sua mesa durante o atendimento.
         </p>
         <div className="auth-highlights">
           <span><ShieldCheck size={17} aria-hidden="true" />Dados mínimos</span>

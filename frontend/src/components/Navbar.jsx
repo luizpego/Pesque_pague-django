@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Fish, LayoutDashboard, LogIn, LogOut, Menu, ShoppingBag, UserRound, X } from "lucide-react";
+import { Fish, LayoutDashboard, LogIn, LogOut, Menu, Scale, ShoppingBag, UserRound, X } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
@@ -53,9 +53,11 @@ export default function Navbar() {
           </button>
 
           <ul id="menu-principal" className={`navbar-links ${menuAberto ? "aberto" : ""}`}>
+            <li><NavLink to="/" end className={classeLink}>Início</NavLink></li>
+            <li><NavLink to="/cardapio" className={classeLink}>Restaurante</NavLink></li>
+            <li><NavLink to="/pesque-pague" className={classeLink}>Pesque-pague</NavLink></li>
             {estaAutenticado ? (
               <>
-                <li><NavLink to="/cardapio" className={classeLink}>Cardápio</NavLink></li>
                 <li>
                   <NavLink to="/carrinho" className={({ isActive }) => `nav-cart ${isActive ? "ativo" : ""}`}>
                     <ShoppingBag size={17} aria-hidden="true" />
@@ -69,12 +71,20 @@ export default function Navbar() {
                 </li>
                 <li><NavLink to="/minhas-comandas" className={classeLink}>Comandas</NavLink></li>
                 {ehStaffOperacional && (
-                  <li>
-                    <NavLink to="/painel" className={classeLink}>
-                      <LayoutDashboard size={16} aria-hidden="true" />
-                      Painel
-                    </NavLink>
-                  </li>
+                  <>
+                    <li>
+                      <NavLink to="/painel" className={classeLink}>
+                        <LayoutDashboard size={16} aria-hidden="true" />
+                        Pedidos
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink to="/operacao-pesca" className={classeLink}>
+                        <Scale size={16} aria-hidden="true" />
+                        Operação pesca
+                      </NavLink>
+                    </li>
+                  </>
                 )}
                 <li>
                   <NavLink to="/perfil" className={classeLink}>

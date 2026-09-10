@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import PrintButton from "../components/PrintButton.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import { formatadorDataHora, formatadorMoeda } from "../utils/formatters.js";
 
@@ -45,7 +46,7 @@ export default function MinhasComandas() {
       <PageHeader
         etiqueta="Histórico"
         titulo="Suas comandas"
-        descricao="Acompanhe pedidos abertos, preparo, pagamento e histórico da sua visita."
+        descricao="Acompanhe pedidos abertos, preparo e histórico da sua visita."
         acoes={
           <button type="button" className="botao botao-fantasma" onClick={carregar} disabled={carregando}>
             <RefreshCcw size={16} aria-hidden="true" />
@@ -91,7 +92,6 @@ export default function MinhasComandas() {
                 </div>
                 <div className="badge-group">
                   <StatusBadge status={c.status} />
-                  <StatusBadge status={c.pago ? "approved" : "pending"} tipo="pagamento" pago={c.pago} />
                 </div>
               </div>
 
@@ -112,6 +112,13 @@ export default function MinhasComandas() {
                 <span>Total</span>
                 <strong>{formatadorMoeda.format(c.total)}</strong>
               </p>
+              <PrintButton
+                origem="comanda"
+                origemId={c.id}
+                tipoDocumento="comanda_cliente"
+                rotulo="Visualizar comanda"
+                compacto
+              />
             </article>
           ))}
         </div>

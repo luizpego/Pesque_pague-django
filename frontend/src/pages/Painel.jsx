@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Clock3, CookingPot, RefreshCcw, Search, Utensils } from "lucide-react";
+import { ClipboardList, Clock3, CookingPot, RefreshCcw, Scale, Search, Utensils } from "lucide-react";
+import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import PrintButton from "../components/PrintButton.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import { formatadorDataHora, formatadorMoeda } from "../utils/formatters.js";
@@ -19,7 +21,7 @@ const ROTULO_ACAO = {
   enviada: "Iniciar preparo",
   em_preparo: "Marcar como pronta",
   pronta: "Marcar como entregue",
-  entregue: "Fechar / registrar pagamento",
+  entregue: "Fechar comanda",
 };
 
 function SkeletonPainel() {
@@ -114,10 +116,16 @@ export default function Painel() {
         titulo="Painel da equipe"
         descricao="Fila de comandas com atualização automática a cada 15 segundos."
         acoes={
-          <button type="button" className="botao botao-fantasma" onClick={() => carregar(true)} disabled={carregando}>
-            <RefreshCcw size={16} aria-hidden="true" />
-            Atualizar
-          </button>
+          <div className="page-header-button-group">
+            <Link className="botao botao-secundario" to="/operacao-pesca">
+              <Scale size={16} aria-hidden="true" />
+              Operação pesca
+            </Link>
+            <button type="button" className="botao botao-fantasma" onClick={() => carregar(true)} disabled={carregando}>
+              <RefreshCcw size={16} aria-hidden="true" />
+              Atualizar
+            </button>
+          </div>
         }
       />
 
@@ -185,7 +193,6 @@ export default function Painel() {
                 </div>
                 <div className="badge-group">
                   <StatusBadge status={c.status} />
-                  <StatusBadge status={c.pago ? "approved" : "pending"} tipo="pagamento" pago={c.pago} />
                 </div>
               </div>
 
@@ -201,6 +208,11 @@ export default function Painel() {
                 ))}
               </ul>
               <p className="total-carrinho"><span>Total</span><strong>{formatadorMoeda.format(c.total)}</strong></p>
+              <div className="print-actions" aria-label={`Impressões da comanda ${c.id}`}>
+                <PrintButton origem="comanda" origemId={c.id} tipoDocumento="cozinha" rotulo="Cozinha" compacto />
+                <PrintButton origem="comanda" origemId={c.id} tipoDocumento="balcao" rotulo="Balcão" compacto />
+                <PrintButton origem="comanda" origemId={c.id} tipoDocumento="resumo_mesa" rotulo="Mesa" compacto />
+              </div>
               {PROXIMO_STATUS[c.status] && (
                 <button
                   type="button"

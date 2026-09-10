@@ -1,5 +1,5 @@
 import { CheckCircle2, CircleDashed, Clock3, CookingPot, PackageCheck, XCircle } from "lucide-react";
-import { STATUS_COMANDA, STATUS_PAGAMENTO } from "../utils/formatters.js";
+import { STATUS_COMANDA, STATUS_PAGAMENTO, STATUS_PESCA } from "../utils/formatters.js";
 
 const ICONES = {
   aberta: CircleDashed,
@@ -14,13 +14,18 @@ const ICONES = {
   approved: CheckCircle2,
   rejected: XCircle,
   cancelled: XCircle,
+  aberto: CircleDashed,
+  encerrado: CheckCircle2,
+  cancelado: XCircle,
 };
 
 export default function StatusBadge({ status, tipo = "comanda", pago = false }) {
   const Icone = ICONES[status] || CircleDashed;
   const label = tipo === "pagamento"
     ? STATUS_PAGAMENTO[status] || status
-    : STATUS_COMANDA[status] || status;
+    : tipo === "pesca"
+      ? STATUS_PESCA[status] || status
+      : STATUS_COMANDA[status] || status;
 
   return (
     <span className={`status-badge status-${status} ${pago ? "status-pago" : ""}`}>

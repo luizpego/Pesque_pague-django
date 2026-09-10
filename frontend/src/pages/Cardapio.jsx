@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Fish, Search, LogIn, Utensils } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Fish, Search, LogIn, RefreshCcw, Table2, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import CardapioSkeleton from "../components/CardapioSkeleton.jsx";
@@ -8,6 +7,7 @@ import EstadoVazio from "../components/EstadoVazio.jsx";
 import ItemCardapioCard from "../components/ItemCardapioCard.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useCart } from "../context/CartContext.jsx";
 
 function CategoriaIcone({ nome }) {
   return String(nome || "").toLowerCase().includes("peixe") ? (
@@ -19,7 +19,7 @@ function CategoriaIcone({ nome }) {
 
 export default function Cardapio() {
   const { estaAutenticado } = useAuth();
-  const navigate = useNavigate();
+  const { comanda, abrirComanda, adicionarItem, processando } = useCart();
   const [categorias, setCategorias] = useState([]);
   const [itens, setItens] = useState([]);
   const [mesas, setMesas] = useState([]);
@@ -71,10 +71,9 @@ export default function Cardapio() {
     e.preventDefault();
     if (!mesaEscolhida || !estaAutenticado) return;
     try {
-      const { data } = await api.post("/api/comandas/", { mesa: Number(mesaEscolhida) });
-      navigate("/cardapio");
-    } catch (e) {
-      setErro("Não foi possível abrir a comanda. Por favor, faça login primeiro.");
+      await abrirComanda(Number(mesaEscolhida));
+    } catch {
+      setErro("Não foi possível abrir a comanda nesta mesa.");
     }
   }
 
@@ -119,6 +118,7 @@ export default function Cardapio() {
 
       {formatarMsgAcesso()}
 
+      {estaAutenticado && pedidosHabilitados && !comanda && (
       <form id="selecao-mesa" onSubmit={abrirComandaMesa} className="mesa-panel" aria-label="Selecionar mesa">
         <div className="mesa-panel-copy">
           <span className="panel-icon"><Table2 size={20} aria-hidden="true" /></span>
@@ -143,10 +143,11 @@ export default function Cardapio() {
             ))}
           </select>
         </div>
-        <button type="submit" className="botao botao-primario" disabled={carregando}>
-          {carregando ? "Carregando..." : "Abrir comanda"}
+        <button type="submit" className="botao botao-primario" disabled={carregando || processando}>
+          {carregando || processando ? "Aguarde..." : "Abrir comanda"}
         </button>
       </form>
+      )}
 
       {carregando ? (
         <CardapioSkeleton />
@@ -212,10 +213,14 @@ export default function Cardapio() {
                 <div role="listitem" key={item.id}>
                   <ItemCardapioCard
                     item={item}
+                    aoAdicionar={adicionarItem}
+                    podeAdicionar={estaAutenticado && pedidosHabilitados && Boolean(comanda)}
                     textoAcaoIndisponivel={
                       !estaAutenticado
                         ? "Entrar para pedir"
-                        : "Escolha sua mesa acima"
+                        : !pedidosHabilitados
+                          ? "Pedidos pausados"
+                          : "Escolha sua mesa acima"
                     }
                     linkAcao={!estaAutenticado ? "/entrar?next=/cardapio" : null}
                   />

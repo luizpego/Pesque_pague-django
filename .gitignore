@@ -7,6 +7,7 @@ backend/media/
 backend/staticfiles/
 backend/.env
 backend/venv/
+backend/.venv/
 *.log
 
 # Frontend

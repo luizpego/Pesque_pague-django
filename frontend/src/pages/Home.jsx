@@ -1,22 +1,18 @@
+import { useEffect, useState } from "react";
+import { ArrowRight, Clock3, Fish, MapPin, Phone, ShoppingBag, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
-import { ArrowRight, Clock3, CreditCard, Fish, MapPin, ShieldCheck, ShoppingBag } from "lucide-react";
-import { useAuth } from "../context/AuthContext.jsx";
-
-const DESTAQUES = [
-  { icone: Fish, titulo: "Do lago para a mesa", texto: "Peixes frescos, pratos da casa e preparo acompanhado pela comanda digital." },
-  { icone: ShoppingBag, titulo: "Pedido sem fila", texto: "Escolha a mesa, monte o carrinho e envie tudo para a equipe em poucos toques." },
-  { icone: CreditCard, titulo: "Pagamento com Pix", texto: "Fluxo preparado para QR Code via Mercado Pago, com status visível ao cliente." },
-  { icone: ShieldCheck, titulo: "Operação organizada", texto: "Painel da equipe com status, comandas ativas e atualização recorrente." },
-];
-
-const PASSOS = [
-  "Escolha sua mesa ou ponto de pesca",
-  "Monte a comanda com peixes, pratos e bebidas",
-  "Acompanhe preparo, entrega e pagamento",
-];
+import api from "../api/axios.js";
+import { montarLinkContato } from "../utils/formatters.js";
 
 export default function Home() {
-  const { estaAutenticado } = useAuth();
+  const [conteudo, setConteudo] = useState(null);
+
+  useEffect(() => {
+    api.get("/conteudo-publico/").then(({ data }) => setConteudo(data)).catch(() => {});
+  }, []);
+
+  const estabelecimento = conteudo?.estabelecimento || {};
+  const contato = estabelecimento.whatsapp || estabelecimento.telefone;
 
   return (
     <div className="home-page">
@@ -25,65 +21,112 @@ export default function Home() {
         <div className="hero-content">
           <span className="hero-kicker">
             <MapPin size={16} aria-hidden="true" />
-            Experiência rural com operação digital
+            Restaurante rural e experiência de pesca
           </span>
-          <h1>Pesca, cozinha e comanda em um fluxo tranquilo.</h1>
+          <h1>{estabelecimento.nome || "Pesque & Pague"}</h1>
           <p>
-            Um sistema feito para pesque e pague que une lazer no lago,
-            cardápio digital, pedidos para a cozinha, histórico do cliente e
-            painel operacional para a equipe.
+            Consulte o cardápio sem cadastro, conheça a estrutura dos lagos e
+            encontre as informações da sua visita em dois ambientes bem separados.
           </p>
           <div className="hero-actions">
-            <Link className="botao botao-primario botao-grande" to={estaAutenticado ? "/cardapio" : "/entrar"}>
-              {estaAutenticado ? "Abrir cardápio" : "Entrar para pedir"}
+            <Link className="botao botao-primario botao-grande" to="/cardapio">
+              Ver cardápio
               <ArrowRight size={18} aria-hidden="true" />
             </Link>
-            <Link className="botao botao-claro botao-grande" to="/cadastro">
-              Criar conta
+            <Link className="botao botao-claro botao-grande" to="/pesque-pague">
+              Conhecer a pesca
             </Link>
           </div>
-          <div className="hero-proof" aria-label="Resumo da operação">
-            <span><strong>15 min</strong><small>tempo médio exibido</small></span>
-            <span><strong>JWT</strong><small>sessão protegida</small></span>
-            <span><strong>Pix</strong><small>pagamento preparado</small></span>
+          <div className="hero-proof" aria-label="Informações rápidas">
+            <span>
+              <Utensils size={18} aria-hidden="true" />
+              <small>Cardápio público</small>
+            </span>
+            <span>
+              <Fish size={18} aria-hidden="true" />
+              <small>Pesca organizada</small>
+            </span>
+            {conteudo?.aberto_agora !== null && conteudo?.aberto_agora !== undefined && (
+              <span>
+                <Clock3 size={18} aria-hidden="true" />
+                <small>{conteudo.aberto_agora ? "Aberto agora" : "Fechado agora"}</small>
+              </span>
+            )}
           </div>
         </div>
       </section>
 
-      <section className="section-flow" aria-labelledby="fluxo-title">
-        <div className="section-heading">
-          <span className="section-kicker">Fluxo do cliente</span>
-          <h2 id="fluxo-title">Do primeiro lançamento ao fechamento da conta.</h2>
-        </div>
-        <ol className="steps">
-          {PASSOS.map((passo, index) => (
-            <li key={passo}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              {passo}
-            </li>
-          ))}
-        </ol>
+      {estabelecimento.aviso_importante && (
+        <aside className="important-notice" role="status">
+          <strong>Aviso importante</strong>
+          <span>{estabelecimento.aviso_importante}</span>
+        </aside>
+      )}
+
+      <section className="experience-split" aria-label="Escolha uma área">
+        <article className="experience-panel restaurant-panel">
+          <span className="section-kicker">Restaurante</span>
+          <Utensils size={30} aria-hidden="true" />
+          <h2>Pratos, porções e bebidas em um cardápio fácil de consultar.</h2>
+          <p>
+            {estabelecimento.descricao_restaurante ||
+              "Veja categorias, preços e disponibilidade antes de entrar ou criar uma comanda."}
+          </p>
+          <Link to="/cardapio" className="text-link">
+            Abrir restaurante <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+        </article>
+
+        <article className="experience-panel fishing-panel">
+          <span className="section-kicker">Pesque-pague</span>
+          <Fish size={30} aria-hidden="true" />
+          <h2>Lagos, espécies, modalidades e regras em um espaço próprio.</h2>
+          <p>
+            {estabelecimento.descricao_pesque_pague ||
+              "Consulte as informações publicadas pela equipe e planeje sua pescaria."}
+          </p>
+          <Link to="/pesque-pague" className="text-link">
+            Ver estrutura de pesca <ArrowRight size={17} aria-hidden="true" />
+          </Link>
+        </article>
       </section>
 
-      <section className="feature-grid" aria-label="Destaques do sistema">
-        {DESTAQUES.map(({ icone: Icone, titulo, texto }) => (
-          <article className="feature-card reveal" key={titulo}>
-            <Icone size={24} aria-hidden="true" />
-            <h3>{titulo}</h3>
-            <p>{texto}</p>
-          </article>
-        ))}
-      </section>
+      {(estabelecimento.endereco || contato) && (
+        <section className="visit-band" aria-labelledby="visita-title">
+          <div>
+            <span className="section-kicker">Sua visita</span>
+            <h2 id="visita-title">Informações diretas, sem esconder o essencial.</h2>
+          </div>
+          <div className="visit-actions">
+            {estabelecimento.endereco && (
+              estabelecimento.link_mapa ? (
+                <a href={estabelecimento.link_mapa} target="_blank" rel="noreferrer">
+                  <MapPin size={18} aria-hidden="true" />
+                  {estabelecimento.endereco}
+                </a>
+              ) : (
+                <span><MapPin size={18} aria-hidden="true" />{estabelecimento.endereco}</span>
+              )
+            )}
+            {contato && (
+              <a href={montarLinkContato(contato, Boolean(estabelecimento.whatsapp))}>
+                <Phone size={18} aria-hidden="true" />
+                {contato}
+              </a>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="operations-band">
         <div>
-          <span className="section-kicker">Equipe</span>
-          <h2>Um painel para cozinha, atendimento e gerência enxergarem a mesma fila.</h2>
+          <span className="section-kicker">Atendimento presencial</span>
+          <h2>Monte seu pedido no celular e acerte a conta diretamente no estabelecimento.</h2>
         </div>
         <div className="operations-list">
-          <span><Clock3 size={16} aria-hidden="true" />Atualização periódica</span>
-          <span><ShieldCheck size={16} aria-hidden="true" />Rotas por permissão</span>
-          <span><ShoppingBag size={16} aria-hidden="true" />Comandas detalhadas</span>
+          <span><ShoppingBag size={16} aria-hidden="true" />Comanda organizada</span>
+          <span><Clock3 size={16} aria-hidden="true" />Acompanhamento do preparo</span>
+          <span><Fish size={16} aria-hidden="true" />Pesagens separadas</span>
         </div>
       </section>
     </div>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, HelpCircle, LockKeyhole, UserRound } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import GoogleLoginButton from "../components/GoogleLoginButton.jsx";
 import PasswordField from "../components/PasswordField.jsx";
 import Spinner from "../components/Spinner.jsx";
@@ -9,6 +9,11 @@ import { useAuth } from "../context/AuthContext.jsx";
 export default function Login() {
   const { login, loginComGoogle } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const proximaRota = new URLSearchParams(location.search).get("next");
+  const destino = proximaRota?.startsWith("/") && !proximaRota.startsWith("//")
+    ? proximaRota
+    : "/cardapio";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
@@ -30,7 +35,7 @@ export default function Login() {
     setEnviando(true);
     try {
       await login(username, password);
-      navigate("/cardapio");
+      navigate(destino);
     } catch {
       setErro("Usuário ou senha inválidos.");
     } finally {
@@ -43,7 +48,7 @@ export default function Login() {
     setAviso("");
     try {
       await loginComGoogle(code);
-      navigate("/cardapio");
+      navigate(destino);
     } catch (err) {
       const status = err.response?.status;
       setErro(
@@ -58,10 +63,10 @@ export default function Login() {
     <section className="auth-layout">
       <div className="auth-panel">
         <span className="section-kicker">Acesso seguro</span>
-        <h1>Entre para abrir sua comanda.</h1>
+        <h1>Entre quando quiser abrir uma comanda.</h1>
         <p>
-          Acesse o cardápio, escolha a mesa e acompanhe seu pedido do lago até
-          a cozinha.
+          O cardápio é público. O acesso identifica sua mesa e mantém o histórico
+          do pedido durante a visita.
         </p>
 
         <div className="auth-highlights">

@@ -1944,12 +1944,12 @@ body.alto-contraste .hero-bg {
   }
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1280px) {
   .navbar-conteudo {
     min-height: 4rem;
   }
 
-  .navbar-botao-menu {
+  .navbar-botao-menu.icon-button {
     display: inline-grid;
     border-color: rgba(255, 255, 255, 0.24);
     background: rgba(255, 255, 255, 0.08);
@@ -2210,5 +2210,782 @@ body.alto-contraste .hero-bg {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Áreas públicas e operação do pesque-pague */
+.experience-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.experience-panel {
+  display: grid;
+  min-height: 22rem;
+  align-content: end;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+
+.experience-panel + .experience-panel {
+  border-left: 1px solid var(--color-border);
+}
+
+.experience-panel > svg {
+  color: var(--color-lake-700);
+}
+
+.restaurant-panel {
+  background: linear-gradient(150deg, var(--color-white), var(--color-cream-100));
+}
+
+.fishing-panel {
+  background: linear-gradient(150deg, rgba(35, 90, 93, 0.1), rgba(115, 137, 71, 0.16));
+}
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.important-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-left: 4px solid var(--color-warning);
+  background: #fff7df;
+  color: #62420e;
+  padding: var(--space-4) var(--space-5);
+}
+
+.important-notice strong,
+.important-notice span {
+  color: inherit;
+}
+
+.visit-band {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: var(--space-6);
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-6) 0;
+}
+
+.visit-actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.visit-actions a,
+.visit-actions span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-ink);
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.public-order-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border: 1px solid rgba(35, 90, 93, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(35, 90, 93, 0.08);
+  padding: var(--space-4);
+}
+
+.public-order-notice > div {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.public-order-notice svg {
+  flex: 0 0 auto;
+  color: var(--color-lake-700);
+}
+
+.menu-card-unavailable {
+  display: grid;
+  min-height: 4.5rem;
+  align-items: center;
+  padding: 0 var(--space-4) var(--space-4);
+  margin-top: auto;
+}
+
+.menu-card-unavailable > span {
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 750;
+  padding-top: var(--space-3);
+}
+
+.fishing-public-page,
+.fishing-operations-page,
+.print-page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.fishing-visit-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+}
+
+.fishing-visit-strip > div,
+.fishing-visit-strip > a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 5.5rem;
+  color: var(--color-ink);
+  padding: var(--space-4) var(--space-5);
+  text-decoration: none;
+}
+
+.fishing-visit-strip > * + * {
+  border-left: 1px solid var(--color-border);
+}
+
+.fishing-visit-strip span {
+  display: grid;
+}
+
+.fishing-visit-strip svg {
+  flex: 0 0 auto;
+  color: var(--color-lake-700);
+}
+
+.public-section {
+  display: grid;
+  gap: var(--space-4);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-6);
+}
+
+.fishing-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+  gap: var(--space-4);
+}
+
+.fishing-info-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.fishing-info-card > img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.fishing-info-card > div {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.info-chip {
+  width: fit-content;
+  border-radius: var(--radius-sm);
+  background: rgba(35, 90, 93, 0.11);
+  color: var(--color-lake-700);
+  font-size: var(--text-xs);
+  font-weight: 900;
+  padding: 0.32rem 0.52rem;
+}
+
+.fishing-info-card dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.fishing-info-card dt {
+  color: var(--color-muted);
+}
+
+.fishing-info-card dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.species-grid,
+.services-list,
+.schedule-list,
+.rules-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.species-row,
+.services-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.5);
+  padding: var(--space-3);
+}
+
+.species-row img,
+.species-icon {
+  display: grid;
+  width: 3.75rem;
+  height: 3.75rem;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--color-soft);
+  color: var(--color-lake-700);
+  object-fit: cover;
+}
+
+.species-row h3,
+.services-list h3,
+.rules-list h3 {
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+}
+
+.species-row p,
+.services-list p,
+.rules-list p {
+  font-size: var(--text-sm);
+}
+
+.rules-list {
+  padding: 0;
+  list-style: none;
+}
+
+.rules-list li {
+  display: grid;
+  grid-template-columns: 2.8rem 1fr;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4) 0;
+}
+
+.rules-list li > span {
+  color: var(--color-lake-700);
+  font-weight: 900;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: var(--space-3);
+}
+
+.gallery-grid figure {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  margin: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-soft);
+}
+
+.gallery-grid img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-grid figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  background: rgba(12, 28, 21, 0.82);
+  color: var(--color-white);
+  padding: var(--space-2) var(--space-3);
+}
+
+.schedule-list > div {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) 2fr;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) 0;
+}
+
+.schedule-list dt {
+  font-weight: 850;
+}
+
+.schedule-list dd {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.schedule-list small {
+  color: var(--color-muted);
+}
+
+.page-header-button-group,
+.print-actions,
+.record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.botao-compacto {
+  min-height: 2.25rem;
+  padding: 0.45rem 0.65rem;
+  font-size: var(--text-sm);
+}
+
+.fishing-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fishing-entry-panel,
+.fishing-record {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-5);
+}
+
+.fishing-entry-panel,
+.fishing-record-list {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.compact-heading {
+  margin-bottom: var(--space-4);
+}
+
+.operation-form-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.operation-notes {
+  grid-column: span 2;
+}
+
+.fishing-record {
+  gap: var(--space-4);
+}
+
+.fishing-record > header,
+.record-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.fishing-record > header p,
+.fishing-record > header small {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+.fishing-record-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.fishing-record-summary span {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3);
+}
+
+.fishing-record-summary span + span {
+  border-left: 1px solid var(--color-border);
+}
+
+.fishing-record-summary small {
+  color: var(--color-muted);
+}
+
+.capture-table-wrap {
+  overflow-x: auto;
+}
+
+.capture-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.capture-table th,
+.capture-table td {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.capture-table th {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+}
+
+.capture-table td small {
+  display: block;
+  color: var(--color-muted);
+}
+
+.capture-form {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) minmax(110px, 0.6fr) minmax(180px, 1.4fr) auto auto;
+  gap: var(--space-3);
+  align-items: end;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4) 0;
+}
+
+.capture-price {
+  display: grid;
+  min-width: 9rem;
+}
+
+.capture-price small {
+  color: var(--color-muted);
+}
+
+.record-actions {
+  align-items: center;
+}
+
+/* Pré-visualização e impressão */
+.print-page {
+  align-items: start;
+}
+
+.print-toolbar {
+  position: sticky;
+  top: 7.5rem;
+  z-index: 10;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-3);
+}
+
+.print-toolbar select {
+  min-height: 2.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-white);
+  padding: 0 var(--space-3);
+}
+
+.print-state {
+  width: 100%;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.print-sheet {
+  width: min(100%, 80mm);
+  margin: 0 auto;
+  border: 1px solid #bbb;
+  background: #fff;
+  color: #111;
+  box-shadow: var(--shadow-md);
+  font-family: Arial, sans-serif;
+  padding: 5mm;
+}
+
+.print-sheet.paper-58 {
+  width: min(100%, 58mm);
+  padding: 4mm;
+}
+
+.print-sheet.paper-a4 {
+  width: min(100%, 210mm);
+  min-height: 260mm;
+  padding: 12mm;
+}
+
+.receipt-header {
+  border-bottom: 1px dashed #333;
+  padding-bottom: 4mm;
+  text-align: center;
+}
+
+.receipt-header strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+.receipt-header h1 {
+  margin: 2mm 0 1mm;
+  color: #111;
+  font-family: Arial, sans-serif;
+  font-size: 1rem;
+}
+
+.receipt-meta,
+.receipt-totals {
+  display: grid;
+  gap: 1.5mm;
+  margin: 4mm 0;
+}
+
+.receipt-meta div,
+.receipt-totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: 3mm;
+}
+
+.receipt-meta dt,
+.receipt-totals dt {
+  font-weight: 700;
+}
+
+.receipt-meta dd,
+.receipt-totals dd {
+  margin: 0;
+  text-align: right;
+}
+
+.receipt-items {
+  width: 100%;
+  margin: 4mm 0;
+  border-collapse: collapse;
+}
+
+.receipt-items th,
+.receipt-items td {
+  border-bottom: 1px dashed #777;
+  padding: 2mm 1mm;
+  text-align: left;
+  vertical-align: top;
+}
+
+.receipt-items th:last-child,
+.receipt-items td:last-child {
+  text-align: right;
+}
+
+.receipt-items td small {
+  display: block;
+  margin-top: 1mm;
+}
+
+.receipt-total,
+.receipt-totals .grand-total {
+  display: flex;
+  justify-content: space-between;
+  border-top: 2px solid #111;
+  color: #111;
+  font-size: 1.05rem;
+  padding-top: 3mm;
+}
+
+.receipt-notes,
+.receipt-footer {
+  border-top: 1px dashed #333;
+  color: #111;
+  padding-top: 3mm;
+}
+
+.receipt-footer {
+  margin-top: 5mm;
+  text-align: center;
+}
+
+.receipt-footer p,
+.receipt-footer small {
+  color: #111;
+}
+
+@media (max-width: 900px) {
+  .operation-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operation-notes {
+    grid-column: span 2;
+  }
+
+  .capture-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .capture-observation {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 700px) {
+  .experience-split,
+  .visit-band,
+  .fishing-visit-strip,
+  .fishing-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .experience-panel {
+    min-height: 18rem;
+    padding: var(--space-5);
+  }
+
+  .experience-panel + .experience-panel,
+  .fishing-visit-strip > * + * {
+    border-top: 1px solid var(--color-border);
+    border-left: 0;
+  }
+
+  .public-order-notice,
+  .public-order-notice > div,
+  .fishing-record > header,
+  .record-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .public-order-notice > div:last-child .botao {
+    flex: 1;
+  }
+
+  .species-row,
+  .services-list article {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .species-row > strong,
+  .services-list article > strong {
+    grid-column: 2;
+  }
+
+  .operation-form-grid,
+  .capture-form,
+  .fishing-record-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .operation-notes,
+  .capture-observation {
+    grid-column: auto;
+  }
+
+  .fishing-record-summary span + span {
+    border-top: 1px solid var(--color-border);
+    border-left: 0;
+  }
+
+  .print-toolbar {
+    position: static;
+  }
+}
+
+@page thermal-58 {
+  size: 58mm auto;
+  margin: 4mm;
+}
+
+@page thermal-80 {
+  size: 80mm auto;
+  margin: 5mm;
+}
+
+@page standard-a4 {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+    color: #000;
+    font-size: 10pt;
+  }
+
+  .site-header,
+  .rodape,
+  .print-toolbar,
+  .pular-conteudo {
+    display: none !important;
+  }
+
+  .conteudo-principal,
+  .print-page {
+    display: block;
+    width: auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-sheet {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+    border: 0;
+    box-shadow: none;
+    page: thermal-80;
+    padding: 0;
+  }
+
+  .print-sheet.paper-58 {
+    width: 50mm;
+    page: thermal-58;
+  }
+
+  .print-sheet.paper-80 {
+    width: 70mm;
+    page: thermal-80;
+  }
+
+  .print-sheet.paper-a4 {
+    width: auto;
+    page: standard-a4;
+  }
+
+  .receipt-items,
+  .receipt-meta,
+  .receipt-totals {
+    break-inside: avoid;
   }
 }

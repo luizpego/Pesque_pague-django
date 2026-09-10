@@ -6,7 +6,7 @@ import { useToast } from "./ToastContext.jsx";
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
-  const { estaAutenticado } = useAuth();
+  const { estaAutenticado, usuario } = useAuth();
   const toast = useToast();
   const [comanda, setComanda] = useState(null);
   const [carregando, setCarregando] = useState(false);
@@ -18,13 +18,13 @@ export function CartProvider({ children }) {
     try {
       const { data } = await api.get("/comandas/", { params: { status: "aberta" } });
       const lista = data.results ?? data;
-      setComanda(lista.length ? lista[0] : null);
+      setComanda(lista.find((item) => item.cliente === usuario?.id) || null);
     } catch {
       toast.erro("Não foi possível carregar sua comanda.");
     } finally {
       setCarregando(false);
     }
-  }, [estaAutenticado]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [estaAutenticado, usuario?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (estaAutenticado) buscarComandaAberta();

@@ -2,7 +2,24 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from .models import CategoriaCardapio, Comanda, ItemCardapio, ItemComanda, Mesa, Pagamento
+from .models import (
+    CapturaPesca,
+    CategoriaCardapio,
+    Comanda,
+    ConfiguracaoEstabelecimento,
+    EspeciePeixe,
+    HorarioFuncionamento,
+    ImagemGaleria,
+    ImpressaoDocumento,
+    ItemCardapio,
+    ItemComanda,
+    LagoPesca,
+    Mesa,
+    Pagamento,
+    RegistroPesca,
+    RegraPesca,
+    ServicoPesca,
+)
 
 Usuario = get_user_model()
 
@@ -64,6 +81,13 @@ class ItemComandaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["preco_unitario"]
 
+    def validate_quantidade(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("A quantidade deve ser maior que zero.")
+        if value > 100:
+            raise serializers.ValidationError("A quantidade máxima por item é 100.")
+        return value
+
 
 class PagamentoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -94,3 +118,146 @@ class ComandaSerializer(serializers.ModelSerializer):
     def get_pagamento_atual(self, obj):
         pagamento = obj.pagamentos.order_by("-criado_em").first()
         return PagamentoSerializer(pagamento).data if pagamento else None
+
+
+class ConfiguracaoEstabelecimentoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConfiguracaoEstabelecimento
+        fields = [
+            "nome",
+            "descricao_restaurante",
+            "descricao_pesque_pague",
+            "telefone",
+            "whatsapp",
+            "email",
+            "endereco",
+            "link_mapa",
+            "aviso_importante",
+            "atualizado_em",
+        ]
+
+
+class HorarioFuncionamentoSerializer(serializers.ModelSerializer):
+    dia_nome = serializers.CharField(source="get_dia_semana_display", read_only=True)
+
+    class Meta:
+        model = HorarioFuncionamento
+        fields = ["id", "dia_semana", "dia_nome", "abre_as", "fecha_as", "fechado", "observacao"]
+
+
+class LagoPescaSerializer(serializers.ModelSerializer):
+    modalidade_nome = serializers.CharField(source="get_modalidade_display", read_only=True)
+
+    class Meta:
+        model = LagoPesca
+        fields = [
+            "id",
+            "nome",
+            "descricao",
+            "modalidade",
+            "modalidade_nome",
+            "valor_diaria",
+            "capacidade",
+            "disponivel",
+            "imagem",
+            "imagem_alt",
+        ]
+
+
+class EspeciePeixeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EspeciePeixe
+        fields = ["id", "nome", "descricao", "preco_quilo", "disponivel", "imagem", "imagem_alt"]
+
+
+class RegraPescaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RegraPesca
+        fields = ["id", "titulo", "descricao", "ordem", "ativa"]
+
+
+class ServicoPescaSerializer(serializers.ModelSerializer):
+    tipo_nome = serializers.CharField(source="get_tipo_display", read_only=True)
+
+    class Meta:
+        model = ServicoPesca
+        fields = ["id", "nome", "descricao", "tipo", "tipo_nome", "valor", "disponivel"]
+
+
+class ImagemGaleriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImagemGaleria
+        fields = ["id", "area", "titulo", "imagem", "imagem_alt", "ordem"]
+
+
+class CapturaPescaSerializer(serializers.ModelSerializer):
+    especie_nome = serializers.CharField(source="especie.nome", read_only=True)
+    total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    registrado_por_nome = serializers.CharField(source="registrado_por.username", read_only=True)
+
+    class Meta:
+        model = CapturaPesca
+        fields = [
+            "id",
+            "especie",
+            "especie_nome",
+            "peso_kg",
+            "preco_quilo",
+            "total",
+            "observacoes",
+            "registrado_em",
+            "registrado_por_nome",
+        ]
+        read_only_fields = ["preco_quilo", "registrado_em"]
+
+
+class RegistroPescaSerializer(serializers.ModelSerializer):
+    capturas = CapturaPescaSerializer(many=True, read_only=True)
+    lago_nome = serializers.CharField(source="lago.nome", read_only=True)
+    modalidade_nome = serializers.CharField(source="get_modalidade_display", read_only=True)
+    status_nome = serializers.CharField(source="get_status_display", read_only=True)
+    responsavel_nome = serializers.CharField(source="responsavel_entrada.username", read_only=True)
+    peso_total_kg = serializers.DecimalField(max_digits=9, decimal_places=3, read_only=True)
+    total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+
+    class Meta:
+        model = RegistroPesca
+        fields = [
+            "id",
+            "pescador_nome",
+            "telefone",
+            "lago",
+            "lago_nome",
+            "modalidade",
+            "modalidade_nome",
+            "status",
+            "status_nome",
+            "valor_entrada",
+            "observacoes",
+            "entrada_em",
+            "saida_em",
+            "responsavel_nome",
+            "peso_total_kg",
+            "total",
+            "capturas",
+        ]
+        read_only_fields = ["status", "entrada_em", "saida_em"]
+
+
+class ImpressaoDocumentoSerializer(serializers.ModelSerializer):
+    tipo_nome = serializers.CharField(source="get_tipo_documento_display", read_only=True)
+    status_nome = serializers.CharField(source="get_status_display", read_only=True)
+
+    class Meta:
+        model = ImpressaoDocumento
+        fields = [
+            "id",
+            "tipo_documento",
+            "tipo_nome",
+            "status",
+            "status_nome",
+            "quantidade_solicitacoes",
+            "gerado_em",
+            "ultima_solicitacao_em",
+        ]
+        read_only_fields = fields

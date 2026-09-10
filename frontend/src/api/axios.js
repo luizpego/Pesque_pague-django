@@ -3,6 +3,7 @@ import axios from "axios";
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 
 const api = axios.create({ baseURL: BASE_URL });
+const ROTAS_PUBLICAS = ["/cardapio/", "/categorias/", "/conteudo-publico/", "/lagos/", "/especies/", "/regras-pesca/", "/servicos-pesca/"];
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("pp_access_token");
@@ -30,6 +31,11 @@ api.interceptors.response.use(
           localStorage.removeItem("pp_access_token");
           localStorage.removeItem("pp_refresh_token");
         }
+      }
+      const ehConsultaPublica = original.method === "get" && ROTAS_PUBLICAS.some((rota) => original.url?.startsWith(rota));
+      if (ehConsultaPublica) {
+        delete original.headers.Authorization;
+        return api(original);
       }
     }
     return Promise.reject(error);
