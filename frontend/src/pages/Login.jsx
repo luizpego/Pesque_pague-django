@@ -126,11 +126,6 @@ export default function Login() {
           Ainda não tem conta? <Link to="/cadastro">Cadastre-se</Link>
         </p>
 
-        <div className="demo-box">
-          <strong>Conta de demonstração</strong>
-          <span>Usuário: cliente</span>
-          <span>Senha: pescaria123</span>
-        </div>
       </div>
     </section>
   );

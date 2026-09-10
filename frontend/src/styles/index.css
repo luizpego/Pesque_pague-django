@@ -999,16 +999,6 @@ ol {
   color: var(--color-muted);
 }
 
-.demo-box {
-  display: grid;
-  gap: 0.15rem;
-  border-left: 3px solid var(--color-gold-500);
-  background: var(--color-cream-100);
-  padding: var(--space-3);
-  color: var(--color-muted);
-  font-size: var(--text-sm);
-}
-
 .mensagem-erro,
 .mensagem-sucesso,
 .mensagem-aviso {
