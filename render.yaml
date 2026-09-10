@@ -44,7 +44,7 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      - key: ORDERS_ENABLED
+      - key: ORDERS_FEATURE_ENABLED
         value: "True"
       - key: ONLINE_PAYMENTS_ENABLED
         value: "False"

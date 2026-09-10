@@ -213,5 +213,10 @@ GOOGLE_ALLOWED_ORIGINS = config(
 )
 
 # Pedidos presenciais e pagamentos online são recursos independentes.
-ORDERS_ENABLED = config("ORDERS_ENABLED", default=True, cast=bool)
+# A variável nova prevalece para evitar valores legados preservados pelo provedor.
+ORDERS_ENABLED = config(
+    "ORDERS_FEATURE_ENABLED",
+    default=config("ORDERS_ENABLED", default=True, cast=bool),
+    cast=bool,
+)
 ONLINE_PAYMENTS_ENABLED = config("ONLINE_PAYMENTS_ENABLED", default=False, cast=bool)
