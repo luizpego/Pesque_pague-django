@@ -12,8 +12,10 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await api.get("/auth/me/");
       setUsuario(data);
+      return data;
     } catch {
       setUsuario(null);
+      return null;
     } finally {
       setCarregando(false);
     }
@@ -44,7 +46,7 @@ export function AuthProvider({ children }) {
   async function login(username, password) {
     const { data } = await api.post("/auth/login/", { username, password });
     tokenStorage.setTokens(data.access, data.refresh);
-    await carregarPerfil();
+    return carregarPerfil();
   }
 
   async function loginComGoogle(code) {
@@ -60,7 +62,7 @@ export function AuthProvider({ children }) {
       }
     );
     tokenStorage.setTokens(data.access, data.refresh);
-    await carregarPerfil();
+    return carregarPerfil();
   }
 
   async function registrar(dados) {

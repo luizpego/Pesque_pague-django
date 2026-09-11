@@ -34,8 +34,10 @@ export default function Login() {
 
     setEnviando(true);
     try {
-      await login(username, password);
-      navigate(destino);
+      const usuario = await login(username, password);
+      const ehEquipe = usuario?.is_superuser
+        || ["garcom", "cozinha", "gerente"].includes(usuario?.papel);
+      navigate(proximaRota ? destino : (ehEquipe ? "/painel" : destino));
     } catch {
       setErro("Usuário ou senha inválidos.");
     } finally {
@@ -47,8 +49,10 @@ export default function Login() {
     setErro("");
     setAviso("");
     try {
-      await loginComGoogle(code);
-      navigate(destino);
+      const usuario = await loginComGoogle(code);
+      const ehEquipe = usuario?.is_superuser
+        || ["garcom", "cozinha", "gerente"].includes(usuario?.papel);
+      navigate(proximaRota ? destino : (ehEquipe ? "/painel" : destino));
     } catch (err) {
       const status = err.response?.status;
       setErro(

@@ -83,6 +83,36 @@ test.describe("conteúdo público", () => {
 });
 
 test.describe("autenticação", () => {
+  test("superusuário entra diretamente no painel administrativo", async ({ page }) => {
+    await page.route("**/api/auth/login/", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ access: "access-admin", refresh: "refresh-admin" }),
+    }));
+    await page.route("**/api/auth/me/", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: 1,
+        username: "admin",
+        papel: "cliente",
+        is_superuser: true,
+      }),
+    }));
+    await page.route("**/api/comandas/**", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "[]",
+    }));
+
+    await page.goto("/entrar");
+    await page.getByLabel("Usuário").fill("admin");
+    await page.locator("#password").fill("senha-forte");
+    await page.getByRole("button", { name: "Entrar", exact: true }).click();
+
+    await expect(page).toHaveURL(/\/painel$/);
+  });
+
   test("login inválido é neutro e campos obrigatórios funcionam", async ({ page }) => {
     await page.goto("/entrar");
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
