@@ -6,18 +6,27 @@ import { useCart } from "../context/CartContext.jsx";
 import BarraAcessibilidade from "./BarraAcessibilidade.jsx";
 
 export default function Navbar() {
-  const { estaAutenticado, usuario, logout, ehStaffOperacional } = useAuth();
+  const { estaAutenticado, usuario, logout, ehStaffOperacional, podeOperarPesca } = useAuth();
   const { totalItens } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuAberto, setMenuAberto] = useState(false);
+  const [menuCompacto, setMenuCompacto] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1280px)");
+    const atualizar = () => setMenuCompacto(media.matches);
+    atualizar();
+    media.addEventListener("change", atualizar);
+    return () => media.removeEventListener("change", atualizar);
+  }, []);
 
   useEffect(() => {
     setMenuAberto(false);
   }, [location.pathname]);
 
-  function sair() {
-    logout();
+  async function sair() {
+    await logout();
     setMenuAberto(false);
     navigate("/entrar");
   }
@@ -52,10 +61,17 @@ export default function Navbar() {
             {menuAberto ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
           </button>
 
-          <ul id="menu-principal" className={`navbar-links ${menuAberto ? "aberto" : ""}`}>
+          <ul
+            id="menu-principal"
+            className={`navbar-links ${menuAberto ? "aberto" : ""}`}
+            aria-hidden={menuCompacto && !menuAberto}
+            inert={menuCompacto && !menuAberto ? "" : undefined}
+          >
             <li><NavLink to="/" end className={classeLink}>Início</NavLink></li>
-            <li><NavLink to="/cardapio" className={classeLink}>Restaurante</NavLink></li>
+            <li><NavLink to="/restaurante" className={classeLink}>Restaurante</NavLink></li>
+            <li><NavLink to="/cardapio" className={classeLink}>Cardápio</NavLink></li>
             <li><NavLink to="/pesque-pague" className={classeLink}>Pesque-pague</NavLink></li>
+            <li><NavLink to="/contato" className={classeLink}>Contato</NavLink></li>
             {estaAutenticado ? (
               <>
                 <li>
@@ -78,12 +94,14 @@ export default function Navbar() {
                         Pedidos
                       </NavLink>
                     </li>
-                    <li>
-                      <NavLink to="/operacao-pesca" className={classeLink}>
-                        <Scale size={16} aria-hidden="true" />
-                        Operação pesca
-                      </NavLink>
-                    </li>
+                    {podeOperarPesca && (
+                      <li>
+                        <NavLink to="/operacao-pesca" className={classeLink}>
+                          <Scale size={16} aria-hidden="true" />
+                          Operação pesca
+                        </NavLink>
+                      </li>
+                    )}
                   </>
                 )}
                 <li>

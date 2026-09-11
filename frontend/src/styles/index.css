@@ -215,11 +215,9 @@ ol {
 
 @keyframes page-enter {
   from {
-    opacity: 0;
     transform: translateY(10px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -1734,13 +1732,23 @@ ol {
 
 @keyframes panel-in {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
   to {
-    opacity: 1;
     transform: translateY(0);
   }
+}
+
+.menu-card-placeholder {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  font-weight: 750;
 }
 
 .dialog-backdrop {
@@ -2545,6 +2553,90 @@ body.alto-contraste .hero-bg {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.restaurant-page,
+.contact-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.restaurant-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.restaurant-summary > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  padding: var(--space-5);
+}
+
+.restaurant-summary > div + div {
+  border-left: 1px solid var(--color-border);
+}
+
+.restaurant-summary svg {
+  grid-row: span 2;
+  color: var(--color-lake-700);
+}
+
+.restaurant-summary span {
+  color: var(--color-muted);
+}
+
+.contact-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--space-7);
+  align-items: start;
+}
+
+.contact-details {
+  display: grid;
+  border-top: 1px solid var(--color-border);
+}
+
+.contact-details > a,
+.contact-details > div {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-ink);
+  padding: var(--space-4) 0;
+  text-decoration: none;
+}
+
+.contact-details span {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.contact-details svg {
+  flex: 0 0 auto;
+  color: var(--color-lake-700);
+}
+
+.dialog textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+@media (max-width: 640px) {
+  .restaurant-summary,
+  .contact-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-summary > div + div {
+    border-top: 1px solid var(--color-border);
+    border-left: 0;
+  }
 }
 
 .botao-compacto {

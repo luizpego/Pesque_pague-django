@@ -20,6 +20,7 @@ urlpatterns = [
     path("auth/login/", views.LoginView.as_view(), name="login"),
     path("auth/google/", views.GoogleLoginView.as_view(), name="google-login"),
     path("auth/refresh/", views.RenovarTokenView.as_view(), name="refresh"),
+    path("auth/logout/", views.LogoutView.as_view(), name="logout"),
     path("auth/me/", views.MeView.as_view(), name="me"),
     path("conteudo-publico/", views.ConteudoPublicoView.as_view(), name="conteudo-publico"),
     path("pagamentos/webhook/", views.WebhookMercadoPagoView.as_view(), name="webhook-mercadopago"),

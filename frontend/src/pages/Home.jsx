@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Clock3, Fish, MapPin, Phone, ShoppingBag, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
+import Seo from "../components/Seo.jsx";
 import { montarLinkContato } from "../utils/formatters.js";
 
 export default function Home() {
@@ -16,6 +17,11 @@ export default function Home() {
 
   return (
     <div className="home-page">
+      <Seo
+        titulo="Pesque & Pague | Restaurante e pesca"
+        descricao="Conheça o restaurante, consulte o cardápio e planeje sua visita ao pesque-pague."
+        caminho="/"
+      />
       <section className="hero">
         <div className="hero-bg" aria-hidden="true" />
         <div className="hero-content">
@@ -72,7 +78,7 @@ export default function Home() {
             {estabelecimento.descricao_restaurante ||
               "Veja categorias, preços e disponibilidade antes de entrar ou criar uma comanda."}
           </p>
-          <Link to="/cardapio" className="text-link">
+          <Link to="/restaurante" className="text-link">
             Abrir restaurante <ArrowRight size={17} aria-hidden="true" />
           </Link>
         </article>

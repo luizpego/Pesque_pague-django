@@ -63,6 +63,7 @@ class ItemCardapioAdmin(admin.ModelAdmin):
 class ComandaAdmin(admin.ModelAdmin):
     list_display = ["id", "mesa", "cliente", "status", "pago", "total", "criada_em"]
     list_filter = ["status", "pago", "mesa"]
+    readonly_fields = ["cancelada_em", "cancelada_por", "motivo_cancelamento"]
     inlines = [ItemComandaInline]
 
 

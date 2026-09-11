@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../api/axios.js";
+import { tokenStorage } from "../utils/tokenStorage.js";
 
 const AuthContext = createContext(null);
 
@@ -19,7 +20,7 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    const token = localStorage.getItem("pp_access_token");
+    const token = tokenStorage.getAccess();
     if (token) {
       carregarPerfil();
     } else {
@@ -42,8 +43,7 @@ export function AuthProvider({ children }) {
 
   async function login(username, password) {
     const { data } = await api.post("/auth/login/", { username, password });
-    localStorage.setItem("pp_access_token", data.access);
-    localStorage.setItem("pp_refresh_token", data.refresh);
+    tokenStorage.setTokens(data.access, data.refresh);
     await carregarPerfil();
   }
 
@@ -59,8 +59,7 @@ export function AuthProvider({ children }) {
         headers: { "X-Requested-With": "XmlHttpRequest" },
       }
     );
-    localStorage.setItem("pp_access_token", data.access);
-    localStorage.setItem("pp_refresh_token", data.refresh);
+    tokenStorage.setTokens(data.access, data.refresh);
     await carregarPerfil();
   }
 
@@ -69,10 +68,16 @@ export function AuthProvider({ children }) {
     await login(dados.username, dados.password);
   }
 
-  function logout() {
-    localStorage.removeItem("pp_access_token");
-    localStorage.removeItem("pp_refresh_token");
-    setUsuario(null);
+  async function logout() {
+    const refresh = tokenStorage.getRefresh();
+    try {
+      if (refresh) await api.post("/auth/logout/", { refresh });
+    } catch {
+      // A limpeza local ainda encerra a sessão neste navegador.
+    } finally {
+      tokenStorage.clear();
+      setUsuario(null);
+    }
   }
 
   async function atualizarPreferencias(preferencias) {
@@ -85,8 +90,10 @@ export function AuthProvider({ children }) {
     carregando,
     estaAutenticado: Boolean(usuario),
     ehStaffOperacional: Boolean(
-      usuario && ["garcom", "cozinha", "gerente"].includes(usuario.papel)
+      usuario && (usuario.is_superuser || ["garcom", "cozinha", "gerente"].includes(usuario.papel))
     ),
+    ehGerente: Boolean(usuario?.is_superuser || usuario?.papel === "gerente"),
+    podeOperarPesca: Boolean(usuario && (usuario.is_superuser || ["garcom", "gerente"].includes(usuario.papel))),
     login,
     loginComGoogle,
     registrar,

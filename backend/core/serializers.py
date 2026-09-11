@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from PIL import Image, UnidentifiedImageError
 from rest_framework import serializers
 
 from .models import (
@@ -23,6 +24,33 @@ from .models import (
 
 Usuario = get_user_model()
 
+FORMATOS_IMAGEM_PERMITIDOS = {"JPEG", "PNG", "WEBP"}
+MIMES_IMAGEM_PERMITIDOS = {"image/jpeg", "image/png", "image/webp"}
+TAMANHO_MAXIMO_IMAGEM = 5 * 1024 * 1024
+DIMENSAO_MAXIMA_IMAGEM = 6000
+
+
+def validar_imagem_upload(arquivo):
+    if arquivo.size > TAMANHO_MAXIMO_IMAGEM:
+        raise serializers.ValidationError("A imagem deve ter no máximo 5 MB.")
+    if getattr(arquivo, "content_type", "") not in MIMES_IMAGEM_PERMITIDOS:
+        raise serializers.ValidationError("Envie uma imagem JPEG, PNG ou WebP.")
+    try:
+        arquivo.seek(0)
+        with Image.open(arquivo) as imagem:
+            formato = imagem.format
+            largura, altura = imagem.size
+            imagem.verify()
+    except (UnidentifiedImageError, OSError, ValueError):
+        raise serializers.ValidationError("O arquivo enviado não é uma imagem válida.")
+    finally:
+        arquivo.seek(0)
+    if formato not in FORMATOS_IMAGEM_PERMITIDOS:
+        raise serializers.ValidationError("O formato da imagem não é permitido.")
+    if largura > DIMENSAO_MAXIMA_IMAGEM or altura > DIMENSAO_MAXIMA_IMAGEM:
+        raise serializers.ValidationError("A imagem deve ter no máximo 6000 x 6000 pixels.")
+    return arquivo
+
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -30,8 +58,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
         fields = [
             "id", "username", "first_name", "last_name", "email", "telefone",
             "papel", "preferencia_alto_contraste", "preferencia_fonte_grande",
+            "is_superuser",
         ]
-        read_only_fields = ["papel"]
+        read_only_fields = ["papel", "is_superuser"]
 
 
 class RegistroSerializer(serializers.ModelSerializer):
@@ -63,6 +92,10 @@ class ItemCardapioSerializer(serializers.ModelSerializer):
         ]
 
 
+    def validate_imagem(self, value):
+        return validar_imagem_upload(value)
+
+
 class MesaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Mesa
@@ -79,7 +112,7 @@ class ItemComandaSerializer(serializers.ModelSerializer):
             "id", "comanda", "item_cardapio", "item_cardapio_nome", "quantidade",
             "preco_unitario", "observacoes", "subtotal",
         ]
-        read_only_fields = ["preco_unitario"]
+        read_only_fields = ["comanda", "item_cardapio", "preco_unitario", "observacoes"]
 
     def validate_quantidade(self, value):
         if value <= 0:
@@ -111,9 +144,14 @@ class ComandaSerializer(serializers.ModelSerializer):
         fields = [
             "id", "mesa", "mesa_numero", "cliente", "cliente_nome", "status",
             "observacoes", "criada_em", "atualizada_em", "itens", "total",
-            "pago", "pago_em", "pagamento_atual",
+            "pago", "pago_em", "pagamento_atual", "cancelada_em",
+            "cancelada_por", "motivo_cancelamento",
         ]
-        read_only_fields = ["cliente", "status", "pago", "pago_em"]
+        read_only_fields = [
+            "cliente", "status", "pago", "pago_em", "cancelada_em",
+            "cancelada_por", "motivo_cancelamento",
+        ]
+        extra_kwargs = {"observacoes": {"max_length": 500}}
 
     def get_pagamento_atual(self, obj):
         pagamento = obj.pagamentos.order_by("-criado_em").first()
@@ -164,10 +202,17 @@ class LagoPescaSerializer(serializers.ModelSerializer):
         ]
 
 
+    def validate_imagem(self, value):
+        return validar_imagem_upload(value)
+
+
 class EspeciePeixeSerializer(serializers.ModelSerializer):
     class Meta:
         model = EspeciePeixe
         fields = ["id", "nome", "descricao", "preco_quilo", "disponivel", "imagem", "imagem_alt"]
+
+    def validate_imagem(self, value):
+        return validar_imagem_upload(value)
 
 
 class RegraPescaSerializer(serializers.ModelSerializer):
@@ -188,6 +233,10 @@ class ImagemGaleriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImagemGaleria
         fields = ["id", "area", "titulo", "imagem", "imagem_alt", "ordem"]
+
+
+    def validate_imagem(self, value):
+        return validar_imagem_upload(value)
 
 
 class CapturaPescaSerializer(serializers.ModelSerializer):
@@ -242,6 +291,7 @@ class RegistroPescaSerializer(serializers.ModelSerializer):
             "capturas",
         ]
         read_only_fields = ["status", "entrada_em", "saida_em"]
+        extra_kwargs = {"observacoes": {"max_length": 1000}}
 
 
 class ImpressaoDocumentoSerializer(serializers.ModelSerializer):

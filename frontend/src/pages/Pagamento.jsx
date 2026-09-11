@@ -44,7 +44,7 @@ export default function Pagamento() {
     } catch {
       // Se ainda não existe pagamento, apenas ignora; o botão de gerar cuida disso.
     }
-  }, [comanda, pararPolling, recarregar]);
+  }, [comanda, pararPolling, recarregar, toast]);
 
   const gerarPagamento = useCallback(async () => {
     if (!comanda) return;

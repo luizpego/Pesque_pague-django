@@ -1,19 +1,25 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import Cadastro from "./pages/Cadastro.jsx";
-import Cardapio from "./pages/Cardapio.jsx";
-import Carrinho from "./pages/Carrinho.jsx";
-import Home from "./pages/Home.jsx";
-import Login from "./pages/Login.jsx";
-import MinhasComandas from "./pages/MinhasComandas.jsx";
-import OperacaoPesca from "./pages/OperacaoPesca.jsx";
-import Pagamento from "./pages/Pagamento.jsx";
-import Painel from "./pages/Painel.jsx";
-import PesquePague from "./pages/PesquePague.jsx";
-import Perfil from "./pages/Perfil.jsx";
-import ImprimirComanda from "./pages/ImprimirComanda.jsx";
-import ImprimirPesca from "./pages/ImprimirPesca.jsx";
+import Spinner from "./components/Spinner.jsx";
+
+const Cadastro = lazy(() => import("./pages/Cadastro.jsx"));
+const Cardapio = lazy(() => import("./pages/Cardapio.jsx"));
+const Carrinho = lazy(() => import("./pages/Carrinho.jsx"));
+const Contato = lazy(() => import("./pages/Contato.jsx"));
+const Home = lazy(() => import("./pages/Home.jsx"));
+const Login = lazy(() => import("./pages/Login.jsx"));
+const MinhasComandas = lazy(() => import("./pages/MinhasComandas.jsx"));
+const NaoEncontrada = lazy(() => import("./pages/NaoEncontrada.jsx"));
+const OperacaoPesca = lazy(() => import("./pages/OperacaoPesca.jsx"));
+const Pagamento = lazy(() => import("./pages/Pagamento.jsx"));
+const Painel = lazy(() => import("./pages/Painel.jsx"));
+const PesquePague = lazy(() => import("./pages/PesquePague.jsx"));
+const Perfil = lazy(() => import("./pages/Perfil.jsx"));
+const Restaurante = lazy(() => import("./pages/Restaurante.jsx"));
+const ImprimirComanda = lazy(() => import("./pages/ImprimirComanda.jsx"));
+const ImprimirPesca = lazy(() => import("./pages/ImprimirPesca.jsx"));
 
 const PAGAMENTO_ONLINE_ATIVO = import.meta.env.VITE_ONLINE_PAYMENTS_ENABLED === "true";
 
@@ -23,12 +29,15 @@ export default function App() {
       <a href="#conteudo" className="pular-conteudo">Pular para o conteúdo</a>
       <Navbar />
       <main id="conteudo" className="conteudo-principal page-enter" tabIndex={-1}>
+        <Suspense fallback={<div className="route-loading" role="status"><Spinner />Carregando página...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/entrar" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/cardapio" element={<Cardapio />} />
+          <Route path="/restaurante" element={<Restaurante />} />
           <Route path="/pesque-pague" element={<PesquePague />} />
+          <Route path="/contato" element={<Contato />} />
           <Route
             path="/carrinho"
             element={
@@ -68,7 +77,7 @@ export default function App() {
           <Route
             path="/operacao-pesca"
             element={
-              <ProtectedRoute somenteStaff>
+              <ProtectedRoute somenteStaff papeis={["garcom", "gerente"]}>
                 <OperacaoPesca />
               </ProtectedRoute>
             }
@@ -97,8 +106,9 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          <Route path="*" element={<Home />} />
+          <Route path="*" element={<NaoEncontrada />} />
         </Routes>
+        </Suspense>
       </main>
       <footer className="rodape">
         <div>

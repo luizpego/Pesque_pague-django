@@ -52,11 +52,12 @@ export function CartProvider({ children }) {
       return;
     }
     try {
-      const { data } = await api.post(`/comandas/${comanda.id}/adicionar_item/`, {
-        item_cardapio: itemCardapioId,
-        quantidade,
-        observacoes,
-      });
+      const chave = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
+      const { data } = await api.post(
+        `/comandas/${comanda.id}/adicionar_item/`,
+        { item_cardapio: itemCardapioId, quantidade, observacoes },
+        { headers: { "Idempotency-Key": chave } }
+      );
       setComanda(data);
       toast.sucesso(`${nomeItem} adicionado ao carrinho.`);
     } catch {

@@ -7,6 +7,7 @@ from datetime import timedelta
 import os
 from pathlib import Path
 import dj_database_url
+from corsheaders.defaults import default_headers
 from decouple import config, Csv
 from django.core.exceptions import ImproperlyConfigured
 
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     # Terceiros
     "rest_framework",
     "rest_framework_simplejwt",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     # App do projeto
     "core",
@@ -146,9 +148,10 @@ REST_FRAMEWORK = {
 }
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(hours=8),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
 }
 
 # --------------------------------------------------------------------------
@@ -156,17 +159,21 @@ SIMPLE_JWT = {
 # --------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:5173,http://127.0.0.1:5173",
+    default=(
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:4173,http://127.0.0.1:4173"
+    ),
     cast=Csv(),
 )
-CORS_ALLOW_CREDENTIALS = True
-# Em desenvolvimento (DEBUG=True), libera qualquer origem para eliminar
-# problemas de CORS ao testar em portas/hosts diferentes. Em produção
-# (DEBUG=False), só as origens listadas acima são permitidas.
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_CREDENTIALS = False
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_HEADERS = (*default_headers, "idempotency-key")
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="http://localhost:5173,http://127.0.0.1:5173",
+    default=(
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:4173,http://127.0.0.1:4173"
+    ),
     cast=Csv(),
 )
 

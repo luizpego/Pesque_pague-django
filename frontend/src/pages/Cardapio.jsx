@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Fish, Search, LogIn, RefreshCcw, Table2, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
@@ -6,6 +6,7 @@ import CardapioSkeleton from "../components/CardapioSkeleton.jsx";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import ItemCardapioCard from "../components/ItemCardapioCard.jsx";
 import PageHeader from "../components/PageHeader.jsx";
+import Seo from "../components/Seo.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 
@@ -30,7 +31,7 @@ export default function Cardapio() {
   const [busca, setBusca] = useState("");
   const [pedidosHabilitados, setPedidosHabilitados] = useState(true);
 
-  async function carregarDados() {
+  const carregarDados = useCallback(async () => {
     setCarregando(true);
     setErro("");
     const requisicoes = [
@@ -49,11 +50,11 @@ export default function Cardapio() {
       })
       .catch(() => setErro("Não foi possível carregar cardápio e mesas agora."))
       .finally(() => setCarregando(false));
-  }
+  }, [estaAutenticado]);
 
   useEffect(() => {
     carregarDados();
-  }, [estaAutenticado]);
+  }, [carregarDados]);
 
   const termoBusca = busca.trim().toLowerCase();
   const itensFiltrados = categoriaAtiva
@@ -104,6 +105,11 @@ export default function Cardapio() {
 
   return (
     <div className="catalog-page">
+      <Seo
+        titulo="Cardápio | Pesque & Pague"
+        descricao="Consulte pratos, porções, bebidas, preços e disponibilidade no cardápio público."
+        caminho="/cardapio"
+      />
       <PageHeader
         etiqueta="Cardápio do restaurante"
         titulo="Escolha pratos, porções e bebidas sem precisar entrar."

@@ -1,8 +1,7 @@
 {
+  "cleanUrls": true,
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+    { "source": "/imprimir/comanda/:id", "destination": "/imprimir/comanda/index.html" },
+    { "source": "/imprimir/pesca/:id", "destination": "/imprimir/pesca/index.html" }
   ]
 }

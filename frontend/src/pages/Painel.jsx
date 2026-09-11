@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Clock3, CookingPot, RefreshCcw, Scale, Search, Utensils } from "lucide-react";
+import { AlertTriangle, ClipboardList, CookingPot, RefreshCcw, Scale, Search, Utensils, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
+import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import PrintButton from "../components/PrintButton.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import { useToast } from "../context/ToastContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import { formatadorDataHora, formatadorMoeda } from "../utils/formatters.js";
 
-const PROXIMO_STATUS = {
-  aberta: null,
-  enviada: "em_preparo",
-  em_preparo: "pronta",
-  pronta: "entregue",
-  entregue: "fechada",
+const PROXIMO_STATUS_POR_PAPEL = {
+  cozinha: { enviada: "em_preparo", em_preparo: "pronta" },
+  garcom: { aberta: "enviada", pronta: "entregue", entregue: "fechada" },
+  gerente: { aberta: "enviada", enviada: "em_preparo", em_preparo: "pronta", pronta: "entregue", entregue: "fechada" },
 };
 
 const ROTULO_ACAO = {
@@ -41,19 +41,23 @@ function SkeletonPainel() {
 
 export default function Painel() {
   const toast = useToast();
+  const { usuario, ehGerente } = useAuth();
   const [comandas, setComandas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [atualizandoId, setAtualizandoId] = useState(null);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("todos");
+  const [comandaParaCancelar, setComandaParaCancelar] = useState(null);
+  const [motivoCancelamento, setMotivoCancelamento] = useState("");
+  const papelOperacional = ehGerente ? "gerente" : usuario?.papel;
 
   async function carregar(mostrarCarregando = false) {
     if (mostrarCarregando) setCarregando(true);
     setErro("");
     try {
       const { data } = await api.get("/comandas/");
-      const lista = (data.results ?? data).filter((c) => c.status !== "cancelada");
+      const lista = (data.results ?? data).filter((c) => !["cancelada", "fechada"].includes(c.status));
       setComandas(lista);
     } catch {
       setErro("Não foi possível carregar as comandas.");
@@ -71,7 +75,7 @@ export default function Painel() {
   }, []);
 
   async function avancarStatus(comanda) {
-    const proximo = PROXIMO_STATUS[comanda.status];
+    const proximo = PROXIMO_STATUS_POR_PAPEL[papelOperacional]?.[comanda.status];
     if (!proximo) return;
     setAtualizandoId(comanda.id);
     try {
@@ -85,13 +89,33 @@ export default function Painel() {
     }
   }
 
+  async function cancelarComanda() {
+    if (!comandaParaCancelar || motivoCancelamento.trim().length < 5) return;
+    setAtualizandoId(comandaParaCancelar.id);
+    try {
+      await api.post(`/comandas/${comandaParaCancelar.id}/alterar_status/`, {
+        status: "cancelada",
+        motivo: motivoCancelamento.trim(),
+      });
+      toast.sucesso(`Comanda #${comandaParaCancelar.id} cancelada com registro de auditoria.`);
+      setComandaParaCancelar(null);
+      setMotivoCancelamento("");
+      await carregar(false);
+    } catch (error) {
+      toast.erro(error.response?.data?.motivo || error.response?.data?.detalhe || "Não foi possível cancelar a comanda.");
+    } finally {
+      setAtualizandoId(null);
+    }
+  }
+
   const metricas = useMemo(() => {
-    const total = comandas.reduce((soma, comanda) => soma + Number(comanda.total || 0), 0);
+    const agora = Date.now();
     return [
       { label: "Comandas ativas", value: comandas.length, icon: ClipboardList },
+      { label: "Pedidos novos", value: comandas.filter((c) => c.status === "enviada").length, icon: AlertTriangle },
       { label: "Em preparo", value: comandas.filter((c) => c.status === "em_preparo").length, icon: CookingPot },
       { label: "Prontas", value: comandas.filter((c) => c.status === "pronta").length, icon: Utensils },
-      { label: "Total em aberto", value: formatadorMoeda.format(total), icon: Clock3 },
+      { label: "Pendências +30 min", value: comandas.filter((c) => agora - new Date(c.atualizada_em).getTime() > 30 * 60 * 1000).length, icon: AlertTriangle },
     ];
   }, [comandas]);
 
@@ -213,7 +237,8 @@ export default function Painel() {
                 <PrintButton origem="comanda" origemId={c.id} tipoDocumento="balcao" rotulo="Balcão" compacto />
                 <PrintButton origem="comanda" origemId={c.id} tipoDocumento="resumo_mesa" rotulo="Mesa" compacto />
               </div>
-              {PROXIMO_STATUS[c.status] && (
+              <div className="page-header-button-group">
+              {PROXIMO_STATUS_POR_PAPEL[papelOperacional]?.[c.status] && (
                 <button
                   type="button"
                   className="botao botao-primario botao-bloco"
@@ -223,10 +248,49 @@ export default function Painel() {
                   {atualizandoId === c.id ? "Atualizando..." : ROTULO_ACAO[c.status]}
                 </button>
               )}
+              {(ehGerente || usuario?.papel === "garcom") && (
+                <button
+                  type="button"
+                  className="botao botao-perigo"
+                  onClick={() => setComandaParaCancelar(c)}
+                  disabled={atualizandoId === c.id}
+                >
+                  <XCircle size={17} aria-hidden="true" />Cancelar
+                </button>
+              )}
+              </div>
             </article>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        aberto={Boolean(comandaParaCancelar)}
+        titulo={`Cancelar comanda #${comandaParaCancelar?.id || ""}?`}
+        descricao="O cancelamento permanece no histórico com usuário, data, itens e valores."
+        confirmarTexto="Cancelar comanda"
+        perigoso
+        carregando={atualizandoId === comandaParaCancelar?.id}
+        onConfirmar={cancelarComanda}
+        onCancelar={() => {
+          setComandaParaCancelar(null);
+          setMotivoCancelamento("");
+        }}
+      >
+        <div className="form-grupo">
+          <label htmlFor="motivo-cancelamento">Motivo do cancelamento</label>
+          <textarea
+            id="motivo-cancelamento"
+            value={motivoCancelamento}
+            minLength={5}
+            maxLength={500}
+            required
+            aria-describedby="motivo-cancelamento-ajuda"
+            onChange={(event) => setMotivoCancelamento(event.target.value)}
+          />
+          <small id="motivo-cancelamento-ajuda">Informe pelo menos 5 caracteres.</small>
+        </div>
+      </ConfirmDialog>
     </div>
   );
 }

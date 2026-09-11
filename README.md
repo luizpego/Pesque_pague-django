@@ -11,11 +11,13 @@ operacionais usam autenticação e autorização por papel.
 - Painel de restaurante separado da operação de pesca.
 - Cadastro de lagos, espécies, regras, serviços, horários e galeria.
 - Entrada e saída de pescadores, capturas, peso e preço por quilo.
+- Fluxo de comandas com transições por papel, idempotência e auditoria de cancelamento.
 - Impressão em 58 mm, 80 mm e A4 para cliente, cozinha, balcão e pesca.
 - Estados de documento `gerado`, `solicitado` e `reimpresso`, sem duplicar o
   registro ao reimprimir.
 - Pagamento online preservado atrás de feature flag e desativado por padrão.
 - Login por usuário/senha e integração opcional com Google OAuth.
+- Páginas públicas pré-renderizadas, sitemap, metadados sociais e 404 HTTP real.
 
 ## Arquitetura
 
@@ -67,16 +69,32 @@ execute em produção.
 - Hosts, origens CORS, CSRF e Google OAuth são listas explícitas em produção.
 - Login e renovação de token têm limitação de tentativas.
 - Mesas, comandas, impressões, pagamentos e operação de pesca exigem login.
-- Operações internas exigem papel de garçom, cozinha ou gerente.
+- Administração de catálogo, mesas e conteúdo exige gerente ou superusuário.
+- Cozinha só avança `enviada -> em preparo -> pronta`; garçom cuida de envio,
+  entrega e fechamento; gerente pode executar todas as transições válidas.
+- Clientes só consultam e alteram as próprias comandas; testes de IDOR/BOLA
+  cobrem leitura, edição e remoção usando IDs de outro cliente.
 - Preços e totais são calculados no servidor; valores enviados pelo cliente
   não são confiados.
+- Chaves `Idempotency-Key`, transações e bloqueios de linha evitam itens
+  duplicados e corridas nas operações críticas.
+- Cancelamentos de comanda exigem motivo e registram usuário e horário; os
+  endpoints genéricos de exclusão foram desativados para preservar histórico.
+- JWT de acesso expira em 30 minutos; o refresh rotaciona, entra em blacklist
+  no logout e fica em `sessionStorage`, não em armazenamento persistente.
+- Uploads aceitam somente JPEG, PNG e WebP verificados, até 5 MB e 6000 px.
 - O webhook do Mercado Pago valida HMAC antes de consultar o pagamento.
+- O webhook ignora eventos quando pagamentos estão desativados e falha fechado
+  se a integração ativa não tiver segredo.
 - O frontend publicado recebe CSP, HSTS, proteção contra framing, MIME sniffing
   e uma política restritiva de permissões.
 - O banco PostgreSQL do Blueprint bloqueia conexões externas.
 
-Tokens JWT continuam armazenados no navegador. Evite scripts de terceiros e
-mantenha a CSP atualizada ao adicionar qualquer integração.
+A URL da API é pública por necessidade, mas apenas saúde, cardápio, conteúdo
+institucional, cadastro/login e webhook são rotas anônimas. Dados operacionais
+continuam protegidos por JWT, papel e autorização por objeto. O token de acesso
+continua legível pelo JavaScript da própria página até expirar; evite scripts de
+terceiros e mantenha a CSP atualizada ao adicionar integrações.
 
 ## Variáveis de ambiente
 
@@ -106,6 +124,7 @@ VITE_API_URL=https://pesque-pague-api.onrender.com/api
 VITE_GOOGLE_CLIENT_ID=
 VITE_GOOGLE_AUTH_ENDPOINT=/auth/google/
 VITE_ONLINE_PAYMENTS_ENABLED=false
+VITE_SITE_URL=https://pesque-pague-web.onrender.com
 ```
 
 ## Google OAuth em produção
@@ -121,6 +140,9 @@ Depois de obter a URL definitiva do frontend:
    `VITE_GOOGLE_CLIENT_ID`; mantenha `GOOGLE_CLIENT_SECRET` apenas no backend.
 
 O login por usuário e senha funciona mesmo sem as credenciais Google.
+Sem um Client ID e Client Secret reais não é possível concluir o teste externo
+do Google; o botão informa a ausência de configuração sem impedir o restante do
+site.
 
 ## Pagamento online
 
@@ -153,9 +175,25 @@ pip check
 
 cd ../frontend
 npm ci
-npm audit --omit=dev
+npm run lint
 npm run build
+npm run test:e2e
+npm audit --omit=dev
 ```
+
+`npm run test:e2e` prepara apenas os usuários e a Mesa 999 de teste, inicia a
+API local caso necessário e executa Playwright/axe em Chromium. A suíte cobre
+rotas diretas e reload, 404 real, 320 a 1440 px, API lenta/offline/500,
+acessibilidade, sessão inválida e a jornada cadastro -> pedido -> cozinha ->
+logout. O GitHub Actions repete backend, lint, build e E2E em cada push/PR.
+
+## Migração de integridade
+
+A migração `core.0003` adiciona auditoria de cancelamento, idempotência e
+restrições de uma comanda ativa por mesa e uma comanda aberta por cliente. A
+configuração também ativa as migrações oficiais da blacklist do SimpleJWT. Antes
+de criar as restrições, `core.0003` preserva o histórico e marca como canceladas
+eventuais duplicidades antigas, com uma justificativa técnica.
 
 ## Deploy no Render
 
@@ -163,6 +201,11 @@ O `render.yaml` cria três recursos: PostgreSQL privado, API Django e frontend
 estático. No painel do Render, crie um Blueprint a partir deste repositório e
 aplique-o. O build instala dependências, coleta estáticos, aplica migrações,
 carrega o catálogo inicial e executa o checklist de produção.
+
+O frontend gera HTML separado para `/`, `/restaurante`, `/cardapio`,
+`/pesque-pague` e `/contato`. Não adicione novamente um rewrite global para
+`index.html`: ele transformaria páginas inexistentes em respostas HTTP 200 e
+prejudicaria o SEO. Somente as rotas dinâmicas de impressão usam rewrite.
 
 Depois do primeiro deploy:
 

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { BadgeCheck, Clock3, LogIn, PlusCircle } from "lucide-react";
+import { useRef, useState } from "react";
+import { BadgeCheck, Clock3, ImageOff, LogIn, PlusCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import QuantitySelector from "./QuantitySelector.jsx";
 import Spinner from "./Spinner.jsx";
 import { formatadorMoeda } from "../utils/formatters.js";
 
 function resolverImagem(src) {
-  if (!src) return "/assets/pesque-pague-hero.png";
+  if (!src) return null;
   if (/^https?:\/\//i.test(src) || src.startsWith("data:")) return src;
   const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
   const origem = apiUrl.replace(/\/api\/?$/, "");
@@ -23,13 +23,18 @@ export default function ItemCardapioCard({
   const [quantidade, setQuantidade] = useState(1);
   const [observacoes, setObservacoes] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const envioEmAndamento = useRef(false);
+  const imagemSrc = resolverImagem(item.imagem);
 
   async function submeter(e) {
     e.preventDefault();
+    if (envioEmAndamento.current) return;
+    envioEmAndamento.current = true;
     setEnviando(true);
     try {
       await aoAdicionar(item.id, quantidade, observacoes, item.nome);
     } finally {
+      envioEmAndamento.current = false;
       setEnviando(false);
     }
   }
@@ -37,11 +42,18 @@ export default function ItemCardapioCard({
   return (
     <article className={`menu-card item-cardapio ${item.eh_pescado_no_local ? "pescado" : ""}`}>
       <div className="menu-card-media">
-        <img
-          src={resolverImagem(item.imagem)}
-          alt={item.imagem_alt || `Foto do prato ${item.nome}`}
-          loading="lazy"
-        />
+        {imagemSrc ? (
+          <img
+            src={imagemSrc}
+            alt={item.imagem_alt || `Foto do prato ${item.nome}`}
+            loading="lazy"
+          />
+        ) : (
+          <div className="menu-card-placeholder">
+            <ImageOff size={27} aria-hidden="true" />
+            <span>Foto não publicada</span>
+          </div>
+        )}
         {item.eh_pescado_no_local && (
           <span className="selo-pescado">
             <BadgeCheck size={14} aria-hidden="true" />

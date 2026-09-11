@@ -12,6 +12,33 @@ class EhStaffOperacional(permissions.BasePermission):
         )
 
 
+class EhGerente(permissions.BasePermission):
+    """Restringe alterações administrativas a gerentes e superusuários."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (user.is_superuser or user.papel == user.Papel.GERENTE)
+        )
+
+
+class EhAtendimentoPesca(permissions.BasePermission):
+    """Permite operar a pesca a atendentes/garçons e gerentes."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(
+            user
+            and user.is_authenticated
+            and (
+                user.is_superuser
+                or user.papel in {user.Papel.GARCOM, user.Papel.GERENTE}
+            )
+        )
+
+
 class ComandaEhDoClienteOuStaff(permissions.BasePermission):
     """Cliente só vê/edita a própria comanda; staff operacional vê todas."""
 

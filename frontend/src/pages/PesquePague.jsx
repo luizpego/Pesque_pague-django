@@ -13,6 +13,7 @@ import api from "../api/axios.js";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import Spinner from "../components/Spinner.jsx";
+import Seo from "../components/Seo.jsx";
 import { formatadorMoeda, montarLinkContato } from "../utils/formatters.js";
 
 function resolverImagem(src) {
@@ -79,6 +80,11 @@ export default function PesquePague() {
 
   return (
     <div className="fishing-public-page">
+      <Seo
+        titulo="Pesque-pague | Lagos, espécies e regras"
+        descricao="Consulte horários, lagos, espécies, regras, serviços e preços do pesque-pague."
+        caminho="/pesque-pague"
+      />
       <PageHeader
         etiqueta="Pesque-pague"
         titulo="Planeje a pescaria com as informações certas."

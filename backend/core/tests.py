@@ -194,7 +194,10 @@ class RegistroPescaTests(BaseAPITestCase):
 
 
 class WebhookTests(APITestCase):
-    @override_settings(MERCADO_PAGO_WEBHOOK_SECRET="segredo-teste")
+    @override_settings(
+        ONLINE_PAYMENTS_ENABLED=True,
+        MERCADO_PAGO_WEBHOOK_SECRET="segredo-teste",
+    )
     def test_webhook_rejeita_assinatura_invalida_e_aceita_valida(self):
         payload = {"type": "payment", "data": {"id": "123"}}
         invalida = self.client.post(
@@ -218,6 +221,15 @@ class WebhookTests(APITestCase):
             HTTP_X_REQUEST_ID="req-1",
         )
         self.assertEqual(valida.status_code, status.HTTP_200_OK)
+
+    @override_settings(ONLINE_PAYMENTS_ENABLED=True, MERCADO_PAGO_WEBHOOK_SECRET="")
+    def test_webhook_falha_fechado_sem_segredo(self):
+        resposta = self.client.post(
+            "/api/pagamentos/webhook/",
+            {"type": "payment", "data": {"id": "123"}},
+            format="json",
+        )
+        self.assertEqual(resposta.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class GoogleLoginSecurityTests(APITestCase):

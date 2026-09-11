@@ -1,10 +1,26 @@
 from decimal import Decimal
+from pathlib import Path
+from uuid import uuid4
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
+
+
+def caminho_imagem(instance, filename):
+    """Descarta nomes enviados pelo cliente e mantém somente a extensão."""
+
+    extensao = Path(filename).suffix.lower()[:10]
+    pastas = {
+        "ItemCardapio": "cardapio",
+        "LagoPesca": "pesca/lagos",
+        "EspeciePeixe": "pesca/especies",
+        "ImagemGaleria": "galeria",
+    }
+    pasta = pastas.get(instance.__class__.__name__, "uploads")
+    return f"{pasta}/{uuid4().hex}{extensao}"
 
 
 class Usuario(AbstractUser):
@@ -86,7 +102,7 @@ class ItemCardapio(models.Model):
     )
     nome = models.CharField(max_length=120)
     descricao = models.TextField(blank=True)
-    imagem = models.ImageField(upload_to="cardapio/", blank=True, null=True)
+    imagem = models.ImageField(upload_to=caminho_imagem, blank=True, null=True)
     preco = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -138,9 +154,32 @@ class Comanda(models.Model):
     # cliente pode pagar antes, durante ou depois de comer.
     pago = models.BooleanField(default=False)
     pago_em = models.DateTimeField(null=True, blank=True)
+    cancelada_em = models.DateTimeField(null=True, blank=True)
+    cancelada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="comandas_canceladas",
+    )
+    motivo_cancelamento = models.CharField(max_length=500, blank=True)
 
     class Meta:
         ordering = ["-criada_em"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["mesa"],
+                condition=models.Q(
+                    status__in=["aberta", "enviada", "em_preparo", "pronta", "entregue"]
+                ),
+                name="comanda_ativa_unica_por_mesa",
+            ),
+            models.UniqueConstraint(
+                fields=["cliente"],
+                condition=models.Q(status="aberta", cliente__isnull=False),
+                name="comanda_aberta_unica_por_cliente",
+            ),
+        ]
         verbose_name = "Comanda"
         verbose_name_plural = "Comandas"
 
@@ -284,7 +323,7 @@ class LagoPesca(models.Model):
     )
     capacidade = models.PositiveSmallIntegerField(null=True, blank=True)
     disponivel = models.BooleanField(default=True)
-    imagem = models.ImageField(upload_to="pesca/lagos/", blank=True, null=True)
+    imagem = models.ImageField(upload_to=caminho_imagem, blank=True, null=True)
     imagem_alt = models.CharField(max_length=200, blank=True)
 
     class Meta:
@@ -305,7 +344,7 @@ class EspeciePeixe(models.Model):
         validators=[MinValueValidator(Decimal("0.00"))],
     )
     disponivel = models.BooleanField(default=True)
-    imagem = models.ImageField(upload_to="pesca/especies/", blank=True, null=True)
+    imagem = models.ImageField(upload_to=caminho_imagem, blank=True, null=True)
     imagem_alt = models.CharField(max_length=200, blank=True)
 
     class Meta:
@@ -365,7 +404,7 @@ class ImagemGaleria(models.Model):
 
     area = models.CharField(max_length=15, choices=Area.choices)
     titulo = models.CharField(max_length=120, blank=True)
-    imagem = models.ImageField(upload_to="galeria/")
+    imagem = models.ImageField(upload_to=caminho_imagem)
     imagem_alt = models.CharField(max_length=200)
     ordem = models.PositiveSmallIntegerField(default=0)
     ativa = models.BooleanField(default=True)
@@ -529,3 +568,28 @@ class ImpressaoDocumento(models.Model):
     def __str__(self):
         origem = self.comanda or self.registro_pesca
         return f"{self.get_tipo_documento_display()} - {origem}"
+
+
+class RequisicaoIdempotente(models.Model):
+    """Marca uma mutação já processada para que retries não a dupliquem."""
+
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="requisicoes_idempotentes",
+    )
+    operacao = models.CharField(max_length=100)
+    chave = models.CharField(max_length=64)
+    criada_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["usuario", "operacao", "chave"],
+                name="requisicao_idempotente_unica",
+            )
+        ]
+        indexes = [models.Index(fields=["criada_em"])]
+
+    def __str__(self):
+        return f"{self.usuario_id}:{self.operacao}:{self.chave}"
