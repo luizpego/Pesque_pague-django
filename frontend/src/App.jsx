@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import Spinner from "./components/Spinner.jsx";
 
 const Cadastro = lazy(() => import("./pages/Cadastro.jsx"));
+const Administracao = lazy(() => import("./pages/Administracao.jsx"));
 const Cardapio = lazy(() => import("./pages/Cardapio.jsx"));
 const Carrinho = lazy(() => import("./pages/Carrinho.jsx"));
 const Contato = lazy(() => import("./pages/Contato.jsx"));
@@ -63,6 +64,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MinhasComandas />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/administracao"
+            element={
+              <ProtectedRoute somenteStaff papeis={["gerente"]}>
+                <Administracao />
               </ProtectedRoute>
             }
           />

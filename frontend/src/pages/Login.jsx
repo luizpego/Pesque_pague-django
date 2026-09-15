@@ -21,6 +21,13 @@ export default function Login() {
   const [enviando, setEnviando] = useState(false);
   const [tentouEnviar, setTentouEnviar] = useState(false);
 
+  function destinoPorPerfil(usuario) {
+    if (proximaRota) return destino;
+    if (usuario?.is_superuser || usuario?.papel === "gerente") return "/administracao";
+    if (["garcom", "cozinha"].includes(usuario?.papel)) return "/painel";
+    return destino;
+  }
+
   async function aoSubmeter(e) {
     e.preventDefault();
     setErro("");
@@ -35,9 +42,7 @@ export default function Login() {
     setEnviando(true);
     try {
       const usuario = await login(username, password);
-      const ehEquipe = usuario?.is_superuser
-        || ["garcom", "cozinha", "gerente"].includes(usuario?.papel);
-      navigate(proximaRota ? destino : (ehEquipe ? "/painel" : destino));
+      navigate(destinoPorPerfil(usuario));
     } catch {
       setErro("Usuário ou senha inválidos.");
     } finally {
@@ -50,9 +55,7 @@ export default function Login() {
     setAviso("");
     try {
       const usuario = await loginComGoogle(code);
-      const ehEquipe = usuario?.is_superuser
-        || ["garcom", "cozinha", "gerente"].includes(usuario?.papel);
-      navigate(proximaRota ? destino : (ehEquipe ? "/painel" : destino));
+      navigate(destinoPorPerfil(usuario));
     } catch (err) {
       const status = err.response?.status;
       setErro(

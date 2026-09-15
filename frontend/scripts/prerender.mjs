@@ -39,7 +39,7 @@ const paginas = [
 ];
 
 const rotasAplicacao = [
-  "/entrar", "/cadastro", "/carrinho", "/minhas-comandas", "/painel",
+  "/entrar", "/cadastro", "/carrinho", "/minhas-comandas", "/painel", "/administracao",
   "/operacao-pesca", "/perfil", "/pagamento", "/imprimir/comanda", "/imprimir/pesca",
 ];
 
@@ -79,5 +79,5 @@ await writeFile(resolve(dist, "404.html"), htmlDaPagina({
   noindex: true,
 }));
 
-await writeFile(resolve(dist, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /painel\nDisallow: /operacao-pesca\nDisallow: /carrinho\nDisallow: /minhas-comandas\nDisallow: /perfil\nDisallow: /imprimir\nSitemap: ${siteUrl}/sitemap.xml\n`);
+await writeFile(resolve(dist, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /painel\nDisallow: /administracao\nDisallow: /operacao-pesca\nDisallow: /carrinho\nDisallow: /minhas-comandas\nDisallow: /perfil\nDisallow: /imprimir\nSitemap: ${siteUrl}/sitemap.xml\n`);
 await writeFile(resolve(dist, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${paginas.map(({ caminho }) => `  <url><loc>${siteUrl}${caminho}</loc></url>`).join("\n")}\n</urlset>\n`);

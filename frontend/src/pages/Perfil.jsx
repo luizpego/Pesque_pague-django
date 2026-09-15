@@ -41,7 +41,7 @@ export default function Perfil() {
           <div className="profile-details">
             <span><Mail size={16} aria-hidden="true" />{usuario.email || "E-mail não informado"}</span>
             <span><Phone size={16} aria-hidden="true" />{usuario.telefone || "Telefone não informado"}</span>
-            <span><ShieldCheck size={16} aria-hidden="true" />{usuario.papel}</span>
+            <span><ShieldCheck size={16} aria-hidden="true" />{usuario.is_superuser ? "Administrador" : usuario.papel}</span>
           </div>
         </article>
 

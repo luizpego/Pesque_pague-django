@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Fish, LayoutDashboard, LogIn, LogOut, Menu, Scale, ShoppingBag, UserRound, X } from "lucide-react";
+import { Fish, LayoutDashboard, LogIn, LogOut, Menu, Scale, Settings2, ShoppingBag, UserRound, X } from "lucide-react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useCart } from "../context/CartContext.jsx";
 import BarraAcessibilidade from "./BarraAcessibilidade.jsx";
 
 export default function Navbar() {
-  const { estaAutenticado, usuario, logout, ehStaffOperacional, podeOperarPesca } = useAuth();
+  const { estaAutenticado, logout, ehStaffOperacional, ehGerente, podeOperarPesca } = useAuth();
   const { totalItens } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,7 +14,7 @@ export default function Navbar() {
   const [menuCompacto, setMenuCompacto] = useState(false);
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 1280px)");
+    const media = window.matchMedia("(max-width: 1480px)");
     const atualizar = () => setMenuCompacto(media.matches);
     atualizar();
     media.addEventListener("change", atualizar);
@@ -104,10 +104,18 @@ export default function Navbar() {
                     )}
                   </>
                 )}
+                {ehGerente && (
+                  <li>
+                    <NavLink to="/administracao" className={classeLink}>
+                      <Settings2 size={16} aria-hidden="true" />
+                      Administração
+                    </NavLink>
+                  </li>
+                )}
                 <li>
                   <NavLink to="/perfil" className={classeLink}>
                     <UserRound size={16} aria-hidden="true" />
-                    {usuario?.first_name || usuario?.username}
+                    Perfil
                   </NavLink>
                 </li>
                 <li><button type="button" className="nav-exit" onClick={sair}><LogOut size={16} aria-hidden="true" />Sair</button></li>

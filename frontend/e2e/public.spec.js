@@ -83,7 +83,49 @@ test.describe("conteúdo público", () => {
 });
 
 test.describe("autenticação", () => {
-  test("superusuário entra diretamente no painel administrativo", async ({ page }) => {
+  test("administração permite cadastrar item do cardápio", async ({ page }) => {
+    let itens = [];
+    await page.route("**/api/auth/me/", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ id: 1, username: "admin", papel: "gerente", is_superuser: true }),
+    }));
+    await page.route("**/api/categorias/", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ id: 1, nome: "Pratos", ordem: 1, icone: "P" }]),
+    }));
+    await page.route("**/api/cardapio/", async (route) => {
+      if (route.request().method() === "POST") {
+        const novo = { id: 10, categoria_nome: "Pratos", ...route.request().postDataJSON() };
+        itens = [novo];
+        await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify(novo) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(itens) });
+    });
+    await page.route("**/api/comandas/**", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: "[]",
+    }));
+    await page.goto("/");
+    await page.evaluate(() => {
+      sessionStorage.setItem("pp_access_token", "access-admin");
+      sessionStorage.setItem("pp_refresh_token", "refresh-admin");
+    });
+    await page.goto("/administracao");
+    await expect(page.getByRole("heading", { name: "Central de gestão" })).toBeVisible();
+    await page.getByRole("button", { name: /novo/i }).click();
+    await page.getByLabel("Categoria *").selectOption("1");
+    await page.getByLabel("Nome do produto *").fill("Filé de tilápia");
+    await page.getByLabel("Preço *").fill("39.90");
+    await page.getByLabel("Unidade *").selectOption("un");
+    await page.getByRole("button", { name: "Salvar" }).click();
+    await expect(page.getByText("Filé de tilápia")).toBeVisible();
+  });
+
+  test("superusuário entra diretamente na central administrativa", async ({ page }) => {
     await page.route("**/api/auth/login/", (route) => route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -104,13 +146,15 @@ test.describe("autenticação", () => {
       contentType: "application/json",
       body: "[]",
     }));
+    await page.route("**/api/categorias/", (route) => route.fulfill({ status: 200, body: "[]" }));
+    await page.route("**/api/cardapio/", (route) => route.fulfill({ status: 200, body: "[]" }));
 
     await page.goto("/entrar");
     await page.getByLabel("Usuário").fill("admin");
     await page.locator("#password").fill("senha-forte");
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
 
-    await expect(page).toHaveURL(/\/painel$/);
+    await expect(page).toHaveURL(/\/administracao$/);
   });
 
   test("login inválido é neutro e campos obrigatórios funcionam", async ({ page }) => {
