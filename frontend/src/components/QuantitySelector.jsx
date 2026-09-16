@@ -1,17 +1,20 @@
 import { Minus, Plus } from "lucide-react";
+import { useId } from "react";
 
 export default function QuantitySelector({
   id,
   label,
   value,
   min = 1,
+  max,
   step = 1,
   disabled = false,
   onChange,
 }) {
+  const inputId = useId();
   function definirValor(proximo) {
     const numero = Number(proximo);
-    onChange(Math.max(min, Number.isFinite(numero) ? numero : min));
+    onChange(Math.min(max ?? Infinity, Math.max(min, Number.isFinite(numero) ? Number(numero.toFixed(2)) : min)));
   }
 
   return (
@@ -24,13 +27,14 @@ export default function QuantitySelector({
       >
         <Minus size={16} aria-hidden="true" />
       </button>
-      <label className="somente-leitor-de-tela" htmlFor={id}>
+      <label className="somente-leitor-de-tela" htmlFor={id || inputId}>
         {label}
       </label>
       <input
-        id={id}
+        id={id || inputId}
         type="number"
         min={min}
+        max={max}
         step={step}
         value={value}
         disabled={disabled}
@@ -39,7 +43,7 @@ export default function QuantitySelector({
       <button
         type="button"
         aria-label={`Aumentar ${label}`}
-        disabled={disabled}
+        disabled={disabled || Number(value) >= max}
         onClick={() => definirValor(Number(value) + step)}
       >
         <Plus size={16} aria-hidden="true" />

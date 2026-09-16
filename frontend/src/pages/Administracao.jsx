@@ -15,7 +15,9 @@ import {
   Utensils,
   X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { recursosGestao } from "../utils/adminRecursos.js";
+import AtendimentoNav from "../components/AtendimentoNav.jsx";
 import api from "../api/axios.js";
 import EstadoVazio from "../components/EstadoVazio.jsx";
 import PageHeader from "../components/PageHeader.jsx";
@@ -23,6 +25,7 @@ import Spinner from "../components/Spinner.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 
 const RECURSOS = {
+  ...recursosGestao,
   categorias: {
     titulo: "Categorias",
     singular: "categoria",
@@ -53,6 +56,8 @@ const RECURSOS = {
       { nome: "imagem_alt", rotulo: "Descrição da foto", largo: true },
       { nome: "disponivel", rotulo: "Disponível para venda", tipo: "checkbox" },
       { nome: "eh_pescado_no_local", rotulo: "Pescado no local", tipo: "checkbox" },
+      { nome: "imagem", rotulo: "Foto do produto", tipo: "file" },
+      { nome: "destaque", rotulo: "Destaque no site", tipo: "checkbox" },
     ],
   },
   mesas: {
@@ -84,6 +89,7 @@ const RECURSOS = {
       { nome: "descricao", rotulo: "Descrição", tipo: "textarea", largo: true },
       { nome: "imagem_alt", rotulo: "Descrição da foto", largo: true },
       { nome: "disponivel", rotulo: "Lago disponível", tipo: "checkbox" },
+      { nome: "imagem", rotulo: "Foto do lago", tipo: "file" },
     ],
   },
   especies: {
@@ -99,6 +105,7 @@ const RECURSOS = {
       { nome: "descricao", rotulo: "Descrição", tipo: "textarea", largo: true },
       { nome: "imagem_alt", rotulo: "Descrição da foto", largo: true },
       { nome: "disponivel", rotulo: "Espécie disponível", tipo: "checkbox" },
+      { nome: "imagem", rotulo: "Foto da espécie", tipo: "file" },
     ],
   },
   regras: {
@@ -133,6 +140,7 @@ const RECURSOS = {
 };
 
 const VALORES_PADRAO = {
+  papel_cozinha: "80mm", is_active: true, papel: "cliente", status: "pendente", pessoas: 1,
   disponivel: true,
   ativa: true,
   ordem: 0,
@@ -161,6 +169,7 @@ function valoresIniciais(configuracao, item = null) {
 }
 
 function CampoAdmin({ campo, valor, categorias, onChange }) {
+  if (campo.tipo === "file") return <label className="form-grupo">{campo.rotulo}{typeof valor === "string" && valor && <img src={valor} alt="Imagem atual" style={{ width: 100, height: 70, objectFit: "cover" }} />}<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e => onChange(e.target.files[0] || "")} /></label>;
   if (campo.tipo === "checkbox") {
     return (
       <label className="admin-check-field">
@@ -210,14 +219,18 @@ function GestorRecurso({ recursoId, categorias, onAtualizarContagem }) {
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [itemEditando, setItemEditando] = useState(null);
   const [dados, setDados] = useState(() => valoresIniciais(configuracao));
+  const [pagina, setPagina] = useState(1);
+  const [paginacao, setPaginacao] = useState({});
+  const [dataReserva, setDataReserva] = useState("");
 
   async function carregar() {
     setCarregando(true);
     try {
-      const { data } = await api.get(configuracao.endpoint);
+      const { data } = await api.get(configuracao.endpoint, { params: { page: pagina, ...(recursoId === "reservas" && dataReserva ? { data: dataReserva } : {}) } });
+      setPaginacao(data);
       const lista = data.results ?? data;
       setItens(lista);
-      onAtualizarContagem(recursoId, lista.length);
+      onAtualizarContagem(recursoId, data.count ?? lista.length);
     } catch {
       toast.erro(`Não foi possível carregar ${configuracao.titulo.toLowerCase()}.`);
     } finally {
@@ -228,7 +241,7 @@ function GestorRecurso({ recursoId, categorias, onAtualizarContagem }) {
   useEffect(() => {
     carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recursoId]);
+  }, [recursoId, pagina, dataReserva]);
 
   function abrirFormulario(item = null) {
     setItemEditando(item);
@@ -241,10 +254,15 @@ function GestorRecurso({ recursoId, categorias, onAtualizarContagem }) {
     setSalvando(true);
     try {
       const url = itemEditando ? `${configuracao.endpoint}${itemEditando.id}/` : configuracao.endpoint;
-      const payload = Object.fromEntries(configuracao.campos.map((campo) => {
+      let payload = Object.fromEntries(configuracao.campos.filter(c => c.tipo !== "file" || dados[c.nome] instanceof File).map((campo) => {
         const valor = dados[campo.nome];
-        return [campo.nome, campo.tipo === "number" && valor === "" ? null : valor];
+        return [campo.nome, ["number", "time"].includes(campo.tipo) && valor === "" ? null : valor];
       }));
+      if (Object.values(payload).some(v => v instanceof File)) {
+        const form = new FormData();
+        Object.entries(payload).forEach(([k, v]) => { if (v !== null) form.append(k, v); });
+        payload = form;
+      }
       if (itemEditando) await api.patch(url, payload);
       else await api.post(url, payload);
       toast.sucesso(`${itemEditando ? "Alteração" : "Cadastro"} salvo com sucesso.`);
@@ -264,7 +282,7 @@ function GestorRecurso({ recursoId, categorias, onAtualizarContagem }) {
         <div>
           <span className="section-kicker">Cadastros</span>
           <h2 id="admin-resource-title">{configuracao.titulo}</h2>
-          <p>{itens.length} {itens.length === 1 ? "registro" : "registros"}</p>
+          <p>{paginacao.count ?? itens.length} registros</p>
         </div>
         <div className="page-header-button-group">
           <button className="icon-button" type="button" onClick={carregar} aria-label="Atualizar lista" title="Atualizar lista">
@@ -275,6 +293,12 @@ function GestorRecurso({ recursoId, categorias, onAtualizarContagem }) {
           </button>
         </div>
       </div>
+
+      {recursoId === "reservas" && <div className="service-filters">
+        <label>Dia da reserva<input type="date" value={dataReserva} onChange={e => { setDataReserva(e.target.value); setPagina(1); }} /></label>
+        <button className="botao botao-fantasma" onClick={() => { const d = new Date(); setDataReserva(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`); setPagina(1); }}>Hoje</button>
+        <button className="botao botao-fantasma" onClick={() => { setDataReserva(""); setPagina(1); }}>Todas as datas</button>
+      </div>}
 
       {formularioAberto && (
         <form className="admin-editor" onSubmit={salvar}>
@@ -332,12 +356,15 @@ function GestorRecurso({ recursoId, categorias, onAtualizarContagem }) {
           ))}
         </div>
       )}
+      <div className="service-pagination"><span>Página {pagina}</span><button className="botao botao-fantasma" disabled={!paginacao.previous} onClick={() => setPagina(p => p - 1)}>Anterior</button><button className="botao botao-fantasma" disabled={!paginacao.next} onClick={() => setPagina(p => p + 1)}>Próxima</button></div>
     </section>
   );
 }
 
 export default function Administracao() {
-  const [recursoAtivo, setRecursoAtivo] = useState("cardapio");
+  const [params, setParams] = useSearchParams();
+  const recursoAtivo = RECURSOS[params.get("area")] ? params.get("area") : "cardapio";
+  const setRecursoAtivo = area => setParams({ area });
   const [categorias, setCategorias] = useState([]);
   const [contagens, setContagens] = useState({});
 
@@ -348,10 +375,13 @@ export default function Administracao() {
   const grupos = useMemo(() => [
     { titulo: "Restaurante", itens: ["cardapio", "categorias", "mesas"] },
     { titulo: "Pesque-pague", itens: ["lagos", "especies", "regras", "servicos"] },
+    { titulo: "Gestão", itens: ["reservas", "metas", "usuarios"] },
+    { titulo: "Site", itens: ["configuracao", "horarios", "galeria"] },
   ], []);
 
   return (
     <div className="admin-page">
+      <AtendimentoNav />
       <PageHeader
         etiqueta="Administração"
         titulo="Central de gestão"
@@ -386,6 +416,7 @@ export default function Administracao() {
         </aside>
 
         <GestorRecurso
+          key={recursoAtivo}
           recursoId={recursoAtivo}
           categorias={categorias}
           onAtualizarContagem={(id, total) => setContagens((atual) => ({ ...atual, [id]: total }))}

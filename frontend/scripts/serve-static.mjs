@@ -22,6 +22,7 @@ async function localizar(pathname) {
   if (arquivo !== raiz && !arquivo.startsWith(`${raiz}${sep}`)) return null;
   if (pathname.startsWith("/imprimir/comanda/")) arquivo = resolve(raiz, "imprimir/comanda/index.html");
   if (pathname.startsWith("/imprimir/pesca/")) arquivo = resolve(raiz, "imprimir/pesca/index.html");
+  if (pathname.startsWith("/imprimir/atendimento/")) arquivo = resolve(raiz, "imprimir/atendimento/index.html");
   try {
     const info = await stat(arquivo);
     if (info.isDirectory()) arquivo = resolve(arquivo, "index.html");

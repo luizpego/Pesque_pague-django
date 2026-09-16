@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 from uuid import uuid4
 
@@ -31,6 +31,7 @@ class Usuario(AbstractUser):
         GARCOM = "garcom", "Garçom / Atendente"
         COZINHA = "cozinha", "Cozinha"
         GERENTE = "gerente", "Gerente"
+        CAIXA = "caixa", "Caixa"
 
     papel = models.CharField(
         max_length=10, choices=Papel.choices, default=Papel.CLIENTE
@@ -45,7 +46,7 @@ class Usuario(AbstractUser):
 
     @property
     def is_staff_operacional(self):
-        return self.papel in {self.Papel.GARCOM, self.Papel.COZINHA, self.Papel.GERENTE}
+        return self.papel in {self.Papel.GARCOM, self.Papel.COZINHA, self.Papel.GERENTE, self.Papel.CAIXA}
 
 
 class Mesa(models.Model):
@@ -110,6 +111,10 @@ class ItemCardapio(models.Model):
     )
     unidade = models.CharField(max_length=10, choices=Unidade.choices, default=Unidade.UNIDADE)
     disponivel = models.BooleanField(default=True)
+    destaque = models.BooleanField(default=False)
+    controla_estoque = models.BooleanField(default=False)
+    estoque_atual = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    estoque_minimo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     eh_pescado_no_local = models.BooleanField(
         default=False, help_text="Marque para peixes pescados pelo próprio cliente no local"
     )
@@ -123,6 +128,10 @@ class ItemCardapio(models.Model):
 
     class Meta:
         ordering = ["categoria__ordem", "nome"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(estoque_atual__gte=0), name="produto_estoque_nao_negativo"),
+            models.CheckConstraint(condition=models.Q(estoque_minimo__gte=0), name="produto_minimo_nao_negativo"),
+        ]
         verbose_name = "Item do cardápio"
         verbose_name_plural = "Itens do cardápio"
 
@@ -141,12 +150,24 @@ class Comanda(models.Model):
         ENTREGUE = "entregue", "Entregue"
         FECHADA = "fechada", "Fechada"
         CANCELADA = "cancelada", "Cancelada"
+        ATENDIMENTO = "atendimento", "Em atendimento"
+        AGUARDANDO = "aguardando_pagamento", "Aguardando pagamento"
 
-    mesa = models.ForeignKey(Mesa, on_delete=models.PROTECT, related_name="comandas")
+    mesa = models.ForeignKey(Mesa, on_delete=models.PROTECT, related_name="comandas", null=True, blank=True)
     cliente = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="comandas"
     )
-    status = models.CharField(max_length=12, choices=Status.choices, default=Status.ABERTA)
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.ABERTA)
+    identificacao = models.CharField(max_length=120, blank=True)
+    responsavel = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="atendimentos_abertos")
+    fechada_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="atendimentos_fechados")
+    fechada_em = models.DateTimeField(null=True, blank=True, db_index=True)
+    desconto = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    acrescimo = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    subtotal_fechamento = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    total_fechamento = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    versao = models.PositiveIntegerField(default=0)
+    vinculo_token = models.UUIDField(null=True, unique=True, editable=False)
     observacoes = models.TextField(blank=True)
     criada_em = models.DateTimeField(auto_now_add=True)
     atualizada_em = models.DateTimeField(auto_now=True)
@@ -168,13 +189,6 @@ class Comanda(models.Model):
         ordering = ["-criada_em"]
         constraints = [
             models.UniqueConstraint(
-                fields=["mesa"],
-                condition=models.Q(
-                    status__in=["aberta", "enviada", "em_preparo", "pronta", "entregue"]
-                ),
-                name="comanda_ativa_unica_por_mesa",
-            ),
-            models.UniqueConstraint(
                 fields=["cliente"],
                 condition=models.Q(status="aberta", cliente__isnull=False),
                 name="comanda_aberta_unica_por_cliente",
@@ -188,7 +202,35 @@ class Comanda(models.Model):
 
     @property
     def total(self):
-        return sum((item.subtotal for item in self.itens.all()), start=0)
+        if self.total_fechamento is not None:
+            return self.total_fechamento
+        return self.subtotal + self.acrescimo - self.desconto
+
+    @property
+    def subtotal(self):
+        if self.subtotal_fechamento is not None:
+            return self.subtotal_fechamento
+        return sum((item.subtotal for item in self.itens.all() if not item.cancelado), Decimal("0.00"))
+
+
+class Pedido(models.Model):
+    class Status(models.TextChoices):
+        RECEBIDO = "recebido", "Recebido"
+        PREPARANDO = "preparando", "Em preparação"
+        PRONTO = "pronto", "Pronto"
+        ENTREGUE = "entregue", "Entregue"
+        CANCELADO = "cancelado", "Cancelado"
+
+    comanda = models.ForeignKey(Comanda, on_delete=models.PROTECT, related_name="pedidos")
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.RECEBIDO)
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    responsavel = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="pedidos_registrados")
+    cancelado_em = models.DateTimeField(null=True)
+    motivo_cancelamento = models.CharField(max_length=500, blank=True)
+
+    class Meta:
+        ordering = ["criado_em", "id"]
 
 
 class ItemComanda(models.Model):
@@ -199,14 +241,24 @@ class ItemComanda(models.Model):
     quantidade = models.DecimalField(max_digits=6, decimal_places=2, default=1)
     preco_unitario = models.DecimalField(max_digits=8, decimal_places=2)
     observacoes = models.CharField(max_length=200, blank=True)
+    pedido = models.ForeignKey(Pedido, null=True, blank=True, on_delete=models.PROTECT, related_name="itens")
+    nome_registrado = models.CharField(max_length=120, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True, null=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    criado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="itens_registrados")
+    estoque_baixado = models.DecimalField(max_digits=6, decimal_places=2, default=0)
+    cancelado = models.BooleanField(default=False)
+    motivo_cancelamento = models.CharField(max_length=500, blank=True)
 
     class Meta:
         verbose_name = "Item da comanda"
         verbose_name_plural = "Itens da comanda"
 
     def save(self, *args, **kwargs):
-        if not self.preco_unitario:
+        if self.preco_unitario is None:
             self.preco_unitario = self.item_cardapio.preco
+        if not self.nome_registrado:
+            self.nome_registrado = self.item_cardapio.nome
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -214,7 +266,7 @@ class ItemComanda(models.Model):
 
     @property
     def subtotal(self):
-        return self.quantidade * self.preco_unitario
+        return (self.quantidade * self.preco_unitario).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class Pagamento(models.Model):
@@ -232,9 +284,19 @@ class Pagamento(models.Model):
         CANCELADO = "cancelled", "Cancelado"
 
     comanda = models.ForeignKey(Comanda, on_delete=models.CASCADE, related_name="pagamentos")
-    mercado_pago_id = models.CharField(max_length=50, unique=True)
+    mercado_pago_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    class Forma(models.TextChoices):
+        DINHEIRO = "dinheiro", "Dinheiro"
+        PIX = "pix", "PIX"
+        DEBITO = "debito", "Cartão de débito"
+        CREDITO = "credito", "Cartão de crédito"
+
+    forma = models.CharField(max_length=20, choices=Forma.choices, default=Forma.PIX)
+    origem = models.CharField(max_length=10, choices=[("online", "Online"), ("manual", "Presencial")], default="online")
+    registrado_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="pagamentos_registrados")
+    caixa = models.ForeignKey("SessaoCaixa", null=True, on_delete=models.PROTECT, related_name="pagamentos")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDENTE)
-    valor = models.DecimalField(max_digits=10, decimal_places=2)
+    valor = models.DecimalField(max_digits=12, decimal_places=2)
     # Código Pix "copia e cola"
     qr_code = models.TextField(blank=True)
     # Imagem do QR Code já em base64, pronta para exibir num <img>
@@ -255,6 +317,12 @@ class ConfiguracaoEstabelecimento(models.Model):
     """Informações públicas editáveis pelo Django Admin."""
 
     nome = models.CharField(max_length=120, default="Pesque & Pague")
+    descricao_inicio = models.TextField(blank=True)
+    descricao_piscinas = models.TextField(blank=True)
+    descricao_atrativos = models.TextField(blank=True)
+    banner = models.ImageField(upload_to=caminho_imagem, blank=True, null=True)
+    impressora_cozinha = models.CharField(max_length=120, blank=True)
+    papel_cozinha = models.CharField(max_length=4, choices=[("80mm", "80 mm"), ("58mm", "58 mm")], default="80mm")
     descricao_restaurante = models.TextField(blank=True)
     descricao_pesque_pague = models.TextField(blank=True)
     telefone = models.CharField(max_length=30, blank=True)
@@ -401,6 +469,8 @@ class ImagemGaleria(models.Model):
     class Area(models.TextChoices):
         RESTAURANTE = "restaurante", "Restaurante"
         PESCA = "pesca", "Pesque-pague"
+        PISCINA = "piscina", "Piscinas"
+        ATRATIVOS = "atrativos", "Atrativos"
 
     area = models.CharField(max_length=15, choices=Area.choices)
     titulo = models.CharField(max_length=120, blank=True)
@@ -517,8 +587,14 @@ class ImpressaoDocumento(models.Model):
         GERADO = "gerado", "Gerado"
         SOLICITADO = "solicitado", "Solicitado para impressão"
         REIMPRESSO = "reimpresso", "Reimpresso"
+        PENDENTE = "pendente", "Pendente"
+        IMPRESSO = "impresso", "Impresso (confirmado pelo operador)"
+        FALHA = "falha", "Falha"
 
     tipo_documento = models.CharField(max_length=24, choices=TipoDocumento.choices)
+    pedido = models.OneToOneField(Pedido, null=True, blank=True, on_delete=models.PROTECT, related_name="impressao")
+    confirmado_em = models.DateTimeField(null=True, blank=True)
+    detalhe_falha = models.CharField(max_length=300, blank=True)
     comanda = models.ForeignKey(
         Comanda,
         on_delete=models.CASCADE,
@@ -549,7 +625,7 @@ class ImpressaoDocumento(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["tipo_documento", "comanda"],
-                condition=models.Q(comanda__isnull=False),
+                condition=models.Q(comanda__isnull=False, pedido__isnull=True),
                 name="impressao_tipo_comanda_unica",
             ),
             models.UniqueConstraint(
@@ -581,6 +657,8 @@ class RequisicaoIdempotente(models.Model):
     operacao = models.CharField(max_length=100)
     chave = models.CharField(max_length=64)
     criada_em = models.DateTimeField(auto_now_add=True)
+    assinatura = models.CharField(max_length=64, blank=True)
+    resultado_id = models.PositiveBigIntegerField(null=True)
 
     class Meta:
         constraints = [
@@ -593,3 +671,89 @@ class RequisicaoIdempotente(models.Model):
 
     def __str__(self):
         return f"{self.usuario_id}:{self.operacao}:{self.chave}"
+
+
+class EventoComanda(models.Model):
+    comanda = models.ForeignKey(Comanda, on_delete=models.PROTECT, related_name="eventos")
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    usuario_nome = models.CharField(max_length=150, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    acao = models.CharField(max_length=50)
+    dados = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["criado_em", "id"]
+
+
+class MovimentoEstoque(models.Model):
+    produto = models.ForeignKey(ItemCardapio, on_delete=models.PROTECT, related_name="movimentos_estoque")
+    quantidade = models.DecimalField(max_digits=12, decimal_places=2)
+    saldo = models.DecimalField(max_digits=12, decimal_places=2)
+    tipo = models.CharField(max_length=20, choices=[("pedido", "Pedido"), ("cancelamento", "Cancelamento"), ("ajuste", "Ajuste manual"), ("alteracao", "Alteração de pedido")])
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    pedido = models.ForeignKey(Pedido, null=True, on_delete=models.PROTECT)
+    motivo = models.CharField(max_length=500)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+
+
+class SessaoCaixa(models.Model):
+    aberta_em = models.DateTimeField(auto_now_add=True)
+    fechada_em = models.DateTimeField(null=True, blank=True)
+    aberta_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="caixas_abertos")
+    fechada_por = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="caixas_fechados")
+    valor_inicial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    dinheiro_contado = models.DecimalField(max_digits=12, decimal_places=2, null=True)
+    observacoes = models.CharField(max_length=500, blank=True)
+    terminal = models.CharField(max_length=20, default="principal", editable=False)
+
+    class Meta:
+        ordering = ["-aberta_em", "-id"]
+        constraints = [models.UniqueConstraint(fields=["terminal"], condition=models.Q(fechada_em__isnull=True), name="um_caixa_aberto_por_terminal")]
+
+
+class Reserva(models.Model):
+    nome = models.CharField(max_length=120)
+    telefone = models.CharField(max_length=30)
+    data = models.DateField(db_index=True)
+    horario = models.TimeField()
+    pessoas = models.PositiveSmallIntegerField()
+    observacao = models.CharField(max_length=500, blank=True)
+    status = models.CharField(max_length=12, default="pendente", choices=[("pendente", "Pendente"), ("confirmada", "Confirmada"), ("cancelada", "Cancelada / recusada"), ("finalizada", "Finalizada")])
+    criada_em = models.DateTimeField(auto_now_add=True)
+    atualizada_em = models.DateTimeField(auto_now=True)
+    chave = models.UUIDField(unique=True, default=uuid4, editable=False)
+
+    class Meta:
+        ordering = ["-data", "horario", "id"]
+
+
+class MetaDiaria(models.Model):
+    data = models.DateField(unique=True)
+    valor = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.01"))])
+
+    class Meta:
+        ordering = ["-data"]
+
+
+class AuditoriaAdministrativa(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL)
+    usuario_nome = models.CharField(max_length=150)
+    criado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+    acao = models.CharField(max_length=50)
+    entidade = models.CharField(max_length=80)
+    identificador = models.CharField(max_length=80)
+    dados = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["-criado_em", "-id"]
+
+
+class ArquivoMidia(models.Model):
+    """Imagens pequenas persistem no mesmo banco, inclusive em hosts sem disco persistente."""
+    nome = models.CharField(max_length=255, primary_key=True)
+    conteudo = models.BinaryField()
+    mime = models.CharField(max_length=30)
+    criado_em = models.DateTimeField(auto_now_add=True)

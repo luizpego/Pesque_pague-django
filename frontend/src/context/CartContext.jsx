@@ -13,7 +13,7 @@ export function CartProvider({ children }) {
   const [processando, setProcessando] = useState(false);
 
   const buscarComandaAberta = useCallback(async () => {
-    if (!estaAutenticado) return;
+    if (!estaAutenticado || (usuario?.papel === "cozinha" && !usuario?.is_superuser)) return;
     setCarregando(true);
     try {
       const { data } = await api.get("/comandas/", { params: { status: "aberta" } });
@@ -24,7 +24,7 @@ export function CartProvider({ children }) {
     } finally {
       setCarregando(false);
     }
-  }, [estaAutenticado, usuario?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [estaAutenticado, usuario?.id, usuario?.papel, usuario?.is_superuser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (estaAutenticado) buscarComandaAberta();

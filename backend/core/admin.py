@@ -19,6 +19,13 @@ from .models import (
     RegraPesca,
     ServicoPesca,
     Usuario,
+    Pedido,
+    EventoComanda,
+    AuditoriaAdministrativa,
+    MovimentoEstoque,
+    SessaoCaixa,
+    Reserva,
+    MetaDiaria,
 )
 
 
@@ -50,17 +57,37 @@ class CategoriaCardapioAdmin(admin.ModelAdmin):
 class ItemComandaInline(admin.TabularInline):
     model = ItemComanda
     extra = 0
+    can_delete = False
+    readonly_fields = [f.name for f in ItemComanda._meta.fields]
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
+class RegistroSomenteLeitura(admin.ModelAdmin):
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+admin.site.register([AuditoriaAdministrativa, MovimentoEstoque, SessaoCaixa, Reserva, MetaDiaria], RegistroSomenteLeitura)
 
 
 @admin.register(ItemCardapio)
 class ItemCardapioAdmin(admin.ModelAdmin):
+    readonly_fields = ["controla_estoque", "estoque_atual", "estoque_minimo"]
     list_display = ["nome", "categoria", "preco", "unidade", "disponivel", "eh_pescado_no_local"]
     list_filter = ["categoria", "disponivel", "eh_pescado_no_local"]
     search_fields = ["nome", "descricao"]
 
 
 @admin.register(Comanda)
-class ComandaAdmin(admin.ModelAdmin):
+class ComandaAdmin(RegistroSomenteLeitura):
     list_display = ["id", "mesa", "cliente", "status", "pago", "total", "criada_em"]
     list_filter = ["status", "pago", "mesa"]
     readonly_fields = ["cancelada_em", "cancelada_por", "motivo_cancelamento"]
@@ -68,7 +95,7 @@ class ComandaAdmin(admin.ModelAdmin):
 
 
 @admin.register(Pagamento)
-class PagamentoAdmin(admin.ModelAdmin):
+class PagamentoAdmin(RegistroSomenteLeitura):
     list_display = ["id", "comanda", "mercado_pago_id", "status", "valor", "criado_em"]
     list_filter = ["status"]
     readonly_fields = ["mercado_pago_id", "qr_code", "qr_code_base64", "criado_em", "atualizado_em"]
@@ -152,7 +179,7 @@ class RegistroPescaAdmin(admin.ModelAdmin):
 
 
 @admin.register(ImpressaoDocumento)
-class ImpressaoDocumentoAdmin(admin.ModelAdmin):
+class ImpressaoDocumentoAdmin(RegistroSomenteLeitura):
     list_display = [
         "id",
         "tipo_documento",
@@ -171,4 +198,11 @@ class ImpressaoDocumentoAdmin(admin.ModelAdmin):
         "gerado_em",
         "ultima_solicitacao_em",
         "gerado_por",
+        "pedido",
+        "confirmado_em",
+        "detalhe_falha",
     ]
+
+
+admin.site.register(Pedido, RegistroSomenteLeitura)
+admin.site.register(EventoComanda, RegistroSomenteLeitura)

@@ -2,12 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "codex/**"]
   pull_request:
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci-only-disposable
+          POSTGRES_DB: pesque_test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,6 +32,8 @@ jobs:
       - name: Instalar backend
         run: pip install -r backend/requirements.txt
       - name: Testar backend
+        env:
+          DATABASE_URL: postgresql://postgres:ci-only-disposable@localhost:5432/pesque_test
         run: python backend/manage.py test core -v 2
       - name: Validar backend para produção
         env:
@@ -36,11 +46,6 @@ jobs:
           python backend/manage.py makemigrations --check --dry-run
           python backend/manage.py check --deploy
           python -m pip check
-      - name: Preparar banco E2E
-        run: python backend/manage.py migrate && python backend/manage.py seed_catalog && python backend/manage.py prepare_e2e
-      - name: Iniciar API
-        run: python backend/manage.py runserver 127.0.0.1:8000 --noreload &
-
       - name: Instalar frontend
         working-directory: frontend
         run: npm ci

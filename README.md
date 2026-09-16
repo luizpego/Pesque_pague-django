@@ -6,15 +6,21 @@ operacionais usam autenticação e autorização por papel.
 
 ## Recursos
 
+Consulte [OPERACAO.md](OPERACAO.md) para o fluxo integrado, regras de estoque,
+caixa, permissões, migrações e configuração da impressora térmica.
+
 - Cardápio público com busca, categorias, preços e disponibilidade.
-- Comanda vinculada à mesa, com total calculado no backend.
+- Múltiplas comandas independentes por mesa, pedidos e valores históricos.
+- Estoque transacional com movimentações, devolução única e bloqueio de falta.
+- Caixa com abertura, recebimento dividido, fechamento e conferência de dinheiro.
+- Reservas públicas, gestão do site, usuários, metas diárias e dashboard real.
 - Painel de restaurante separado da operação de pesca.
 - Cadastro de lagos, espécies, regras, serviços, horários e galeria.
 - Entrada e saída de pescadores, capturas, peso e preço por quilo.
 - Fluxo de comandas com transições por papel, idempotência e auditoria de cancelamento.
 - Impressão em 58 mm, 80 mm e A4 para cliente, cozinha, balcão e pesca.
-- Estados de documento `gerado`, `solicitado` e `reimpresso`, sem duplicar o
-  registro ao reimprimir.
+- Impressão de pedidos com fila pendente, tentativa, falha e confirmação pelo
+  operador; falhas não cancelam pedidos nem alteram estoque.
 - Pagamento online preservado atrás de feature flag e desativado por padrão.
 - Login por usuário/senha e integração opcional com Google OAuth.
 - Páginas públicas pré-renderizadas, sitemap, metadados sociais e 404 HTTP real.
@@ -70,8 +76,8 @@ execute em produção.
 - Login e renovação de token têm limitação de tentativas.
 - Mesas, comandas, impressões, pagamentos e operação de pesca exigem login.
 - Administração de catálogo, mesas e conteúdo exige gerente ou superusuário.
-- Cozinha só avança `enviada -> em preparo -> pronta`; garçom cuida de envio,
-  entrega e fechamento; gerente pode executar todas as transições válidas.
+- Cozinha avança pedidos de recebido a entregue, sem acesso aos valores,
+  caixa ou administração. Garçom solicita fechamento; caixa/gerente recebe.
 - Clientes só consultam e alteram as próprias comandas; testes de IDOR/BOLA
   cobrem leitura, edição e remoção usando IDs de outro cliente.
 - Preços e totais são calculados no servidor; valores enviados pelo cliente
@@ -90,8 +96,8 @@ execute em produção.
   e uma política restritiva de permissões.
 - O banco PostgreSQL do Blueprint bloqueia conexões externas.
 
-A URL da API é pública por necessidade, mas apenas saúde, cardápio, conteúdo
-institucional, cadastro/login e webhook são rotas anônimas. Dados operacionais
+A URL da API é pública por necessidade, mas apenas saúde, cardápio, conteúdo,
+imagens publicadas, solicitação de reserva, cadastro/login e webhook são anônimos. Dados operacionais
 continuam protegidos por JWT, papel e autorização por objeto. O token de acesso
 continua legível pelo JavaScript da própria página até expirar; evite scripts de
 terceiros e mantenha a CSP atualizada ao adicionar integrações.
@@ -152,17 +158,16 @@ bloqueado pela API enquanto as flags estiverem falsas. Para reativá-lo:
 1. Configure credenciais e segredo de webhook válidos.
 2. Aponte `MERCADO_PAGO_WEBHOOK_URL` para
    `https://SEU-BACKEND/api/pagamentos/webhook/`.
-3. Altere `ONLINE_PAYMENTS_ENABLED=True` no backend e
-   `VITE_ONLINE_PAYMENTS_ENABLED=true` no frontend.
-4. Faça um deploy e teste primeiro com credenciais de sandbox.
+3. Valide primeiro em sandbox, incluindo conciliação com o novo caixa presencial.
+4. Só depois habilite as flags. A operação integrada atual usa recebimentos
+   presenciais registrados pelo caixa; registrar PIX não executa uma transferência.
 
 ## Impressão
 
-O botão de impressão abre o diálogo do navegador, que permite escolher uma
-impressora térmica ou comum. O sistema registra a solicitação, mas não declara
-que o papel foi impresso, pois essa confirmação pertence ao navegador e ao
-driver da impressora. Impressão silenciosa exigiria um agente local confiável,
-como QZ Tray, configurado separadamente.
+O botão abre o diálogo do navegador, com documento de 58 ou 80 mm. O operador
+seleciona a impressora instalada, verifica o papel e confirma o resultado no
+sistema. O pedido é salvo antes da impressão. Veja a configuração e as limitações
+reais em [OPERACAO.md](OPERACAO.md#impressão-térmica).
 
 ## Testes e build
 
@@ -181,26 +186,29 @@ npm run test:e2e
 npm audit --omit=dev
 ```
 
-`npm run test:e2e` prepara apenas os usuários e a Mesa 999 de teste, inicia a
-API local caso necessário e executa Playwright/axe em Chromium. A suíte cobre
+`npm run test:e2e` cria um banco temporário isolado, com senha aleatória e os cinco
+perfis, inicia API e frontend estático e remove esse banco ao terminar. Recusa
+portas 8000/4173 ocupadas, sem reutilizar ou apagar o banco local. A suíte cobre
 rotas diretas e reload, 404 real, 320 a 1440 px, API lenta/offline/500,
 acessibilidade, sessão inválida e a jornada cadastro -> pedido -> cozinha ->
-logout. O GitHub Actions repete backend, lint, build e E2E em cada push/PR.
+logout, venda completa, estoque, caixa, impressão, CMS e reservas. O GitHub Actions
+executa backend em PostgreSQL 16 (incluindo concorrência), lint, build e E2E.
 
 ## Migração de integridade
 
-A migração `core.0003` adiciona auditoria de cancelamento, idempotência e
-restrições de uma comanda ativa por mesa e uma comanda aberta por cliente. A
-configuração também ativa as migrações oficiais da blacklist do SimpleJWT. Antes
-de criar as restrições, `core.0003` preserva o histórico e marca como canceladas
-eventuais duplicidades antigas, com uma justificativa técnica.
+As migrações `core.0006` a `core.0010` integram pedidos, estoque, caixa, reservas,
+auditoria e mídia persistente, preservando os registros existentes. A restrição
+antiga de uma comanda ativa por mesa foi removida em `0008`; comandas distintas
+na mesma mesa são independentes. Veja detalhes da conversão de histórico em
+[OPERACAO.md](OPERACAO.md#banco-de-dados).
 
 ## Deploy no Render
 
 O `render.yaml` cria três recursos: PostgreSQL privado, API Django e frontend
 estático. No painel do Render, crie um Blueprint a partir deste repositório e
-aplique-o. O build instala dependências, coleta estáticos, aplica migrações,
-carrega o catálogo inicial e executa o checklist de produção.
+aplique-o. O build instala dependências, coleta estáticos, aplica migrações e
+executa o checklist de produção. Não insere catálogo demonstrativo. Faça backup
+do PostgreSQL antes da atualização. Não recrie o banco nem os serviços existentes.
 
 O frontend gera HTML separado para `/`, `/restaurante`, `/cardapio`,
 `/pesque-pague` e `/contato`. Não adicione novamente um rewrite global para
@@ -216,6 +224,6 @@ Depois do primeiro deploy:
 3. Configure o Google OAuth com as URLs finais.
 4. Valide cardápio, login, pedido, painel e impressão nas URLs públicas.
 
-Uploads feitos no disco efêmero do Render não são persistentes. Para imagens
-administradas em produção, configure um armazenamento externo compatível com
-Django (por exemplo, S3 ou Cloudinary) antes de depender de novos uploads.
+Imagens administradas são verificadas e persistidas no banco, não no disco
+efêmero do Render. O backup do banco inclui essas imagens. Monitore o espaço do
+PostgreSQL; cada imagem tem limite de 5 MB. Não são necessários novos serviços.

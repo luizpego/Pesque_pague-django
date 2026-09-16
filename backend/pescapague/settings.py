@@ -113,6 +113,7 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
+    "default": {"BACKEND": "core.midia.BancoImagemStorage"},
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -142,6 +143,7 @@ REST_FRAMEWORK = {
         "user": "5000/hour",
         "auth": "10/minute",
         "token_refresh": "30/minute",
+        "reservas": "5/hour",
     },
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,

@@ -23,8 +23,9 @@ export default function Login() {
 
   function destinoPorPerfil(usuario) {
     if (proximaRota) return destino;
-    if (usuario?.is_superuser || usuario?.papel === "gerente") return "/administracao";
-    if (["garcom", "cozinha"].includes(usuario?.papel)) return "/painel";
+    if (usuario?.is_superuser || usuario?.papel === "gerente") return "/dashboard";
+    if (["garcom", "caixa"].includes(usuario?.papel)) return "/atendimento";
+    if (usuario?.papel === "cozinha") return "/painel";
     return destino;
   }
 

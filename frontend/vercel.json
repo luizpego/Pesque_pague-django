@@ -1,6 +1,7 @@
 {
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/imprimir/atendimento/:id", "destination": "/imprimir/atendimento/index.html" },
     { "source": "/imprimir/comanda/:id", "destination": "/imprimir/comanda/index.html" },
     { "source": "/imprimir/pesca/:id", "destination": "/imprimir/pesca/index.html" }
   ]

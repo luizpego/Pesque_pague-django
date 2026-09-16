@@ -11,7 +11,6 @@ const Carrinho = lazy(() => import("./pages/Carrinho.jsx"));
 const Contato = lazy(() => import("./pages/Contato.jsx"));
 const Home = lazy(() => import("./pages/Home.jsx"));
 const Login = lazy(() => import("./pages/Login.jsx"));
-const MinhasComandas = lazy(() => import("./pages/MinhasComandas.jsx"));
 const NaoEncontrada = lazy(() => import("./pages/NaoEncontrada.jsx"));
 const OperacaoPesca = lazy(() => import("./pages/OperacaoPesca.jsx"));
 const Pagamento = lazy(() => import("./pages/Pagamento.jsx"));
@@ -21,6 +20,14 @@ const Perfil = lazy(() => import("./pages/Perfil.jsx"));
 const Restaurante = lazy(() => import("./pages/Restaurante.jsx"));
 const ImprimirComanda = lazy(() => import("./pages/ImprimirComanda.jsx"));
 const ImprimirPesca = lazy(() => import("./pages/ImprimirPesca.jsx"));
+const Atendimento = lazy(() => import("./pages/Atendimento.jsx"));
+const Registros = lazy(() => import("./pages/Registros.jsx"));
+const ImprimirAtendimento = lazy(() => import("./pages/ImprimirAtendimento.jsx"));
+const Dashboard = lazy(() => import("./pages/GestaoOperacional.jsx").then(m => ({ default: m.Dashboard })));
+const Estoque = lazy(() => import("./pages/GestaoOperacional.jsx").then(m => ({ default: m.Estoque })));
+const Caixa = lazy(() => import("./pages/GestaoOperacional.jsx").then(m => ({ default: m.Caixa })));
+const Mesas = lazy(() => import("./pages/GestaoOperacional.jsx").then(m => ({ default: m.Mesas })));
+const Reserva = lazy(() => import("./pages/Reserva.jsx"));
 
 const PAGAMENTO_ONLINE_ATIVO = import.meta.env.VITE_ONLINE_PAYMENTS_ENABLED === "true";
 
@@ -39,6 +46,15 @@ export default function App() {
           <Route path="/restaurante" element={<Restaurante />} />
           <Route path="/pesque-pague" element={<PesquePague />} />
           <Route path="/contato" element={<Contato />} />
+          <Route path="/reservar" element={<Reserva />} />
+          <Route path="/dashboard" element={<ProtectedRoute somenteStaff papeis={["gerente"]}><Dashboard /></ProtectedRoute>} />
+          <Route path="/estoque" element={<ProtectedRoute somenteStaff papeis={["gerente"]}><Estoque /></ProtectedRoute>} />
+          <Route path="/caixa" element={<ProtectedRoute somenteStaff papeis={["gerente", "caixa"]}><Caixa /></ProtectedRoute>} />
+          <Route path="/mesas" element={<ProtectedRoute somenteStaff papeis={["gerente", "garcom", "caixa"]}><Mesas /></ProtectedRoute>} />
+          <Route path="/atendimento" element={<ProtectedRoute somenteStaff papeis={["gerente", "garcom", "caixa"]}><Atendimento key="atendimento" /></ProtectedRoute>} />
+          <Route path="/historico" element={<ProtectedRoute somenteStaff papeis={["gerente", "garcom", "caixa"]}><Atendimento key="historico" historico /></ProtectedRoute>} />
+          <Route path="/registros" element={<ProtectedRoute somenteStaff papeis={["gerente"]}><Registros /></ProtectedRoute>} />
+          <Route path="/imprimir/atendimento/:id" element={<ProtectedRoute><ImprimirAtendimento /></ProtectedRoute>} />
           <Route
             path="/carrinho"
             element={
@@ -63,7 +79,7 @@ export default function App() {
             path="/minhas-comandas"
             element={
               <ProtectedRoute>
-                <MinhasComandas />
+                <Atendimento key="cliente" />
               </ProtectedRoute>
             }
           />

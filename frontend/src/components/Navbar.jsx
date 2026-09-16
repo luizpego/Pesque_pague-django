@@ -72,6 +72,7 @@ export default function Navbar() {
             <li><NavLink to="/cardapio" className={classeLink}>Cardápio</NavLink></li>
             <li><NavLink to="/pesque-pague" className={classeLink}>Pesque-pague</NavLink></li>
             <li><NavLink to="/contato" className={classeLink}>Contato</NavLink></li>
+            <li><NavLink to="/reservar" className={classeLink}>Reservas</NavLink></li>
             {estaAutenticado ? (
               <>
                 <li>
@@ -85,7 +86,7 @@ export default function Navbar() {
                     )}
                   </NavLink>
                 </li>
-                <li><NavLink to="/minhas-comandas" className={classeLink}>Comandas</NavLink></li>
+                <li><NavLink to={ehStaffOperacional ? "/atendimento" : "/minhas-comandas"} className={classeLink}>Comandas</NavLink></li>
                 {ehStaffOperacional && (
                   <>
                     <li>
@@ -106,7 +107,7 @@ export default function Navbar() {
                 )}
                 {ehGerente && (
                   <li>
-                    <NavLink to="/administracao" className={classeLink}>
+                    <NavLink to="/dashboard" className={classeLink}>
                       <Settings2 size={16} aria-hidden="true" />
                       Administração
                     </NavLink>

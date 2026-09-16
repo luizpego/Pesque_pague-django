@@ -83,6 +83,33 @@ test.describe("conteúdo público", () => {
 });
 
 test.describe("autenticação", () => {
+  test("consultas simultâneas renovam a sessão somente uma vez", async ({ page }) => {
+    let renovacoes = 0;
+    let expiradas = 0;
+    await page.addInitScript(() => {
+      sessionStorage.setItem("pp_access_token", "expirado");
+      sessionStorage.setItem("pp_refresh_token", "refresh-antigo");
+    });
+    await page.route("**/api/**", async route => {
+      const url = new URL(route.request().url());
+      if (url.pathname === "/api/auth/refresh/") {
+        renovacoes++;
+        await new Promise(resolve => setTimeout(resolve, 300));
+        return route.fulfill({ json: { access: "renovado", refresh: "refresh-novo" } });
+      }
+      if (route.request().headers().authorization === "Bearer expirado") {
+        expiradas++;
+        return route.fulfill({ status: 401, json: { detail: "Token expirado" } });
+      }
+      const json = url.pathname === "/api/auth/me/" ? { id: 1, username: "teste", papel: "cliente" } : url.pathname === "/api/conteudo-publico/" ? {} : { results: [] };
+      return route.fulfill({ json });
+    });
+    await page.goto("/");
+    await expect.poll(() => page.evaluate(() => sessionStorage.getItem("pp_access_token"))).toBe("renovado");
+    expect(expiradas).toBeGreaterThan(1);
+    expect(renovacoes).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.getItem("pp_refresh_token"))).toBe("refresh-novo");
+  });
   test("administração permite cadastrar item do cardápio", async ({ page }) => {
     let itens = [];
     await page.route("**/api/auth/me/", (route) => route.fulfill({
@@ -95,7 +122,7 @@ test.describe("autenticação", () => {
       contentType: "application/json",
       body: JSON.stringify([{ id: 1, nome: "Pratos", ordem: 1, icone: "P" }]),
     }));
-    await page.route("**/api/cardapio/", async (route) => {
+    await page.route(/\/api\/cardapio\/(?:\?.*)?$/, async (route) => {
       if (route.request().method() === "POST") {
         const novo = { id: 10, categoria_nome: "Pratos", ...route.request().postDataJSON() };
         itens = [novo];
@@ -147,14 +174,14 @@ test.describe("autenticação", () => {
       body: "[]",
     }));
     await page.route("**/api/categorias/", (route) => route.fulfill({ status: 200, body: "[]" }));
-    await page.route("**/api/cardapio/", (route) => route.fulfill({ status: 200, body: "[]" }));
+    await page.route(/\/api\/cardapio\/(?:\?.*)?$/, (route) => route.fulfill({ status: 200, body: "[]" }));
 
     await page.goto("/entrar");
     await page.getByLabel("Usuário").fill("admin");
     await page.locator("#password").fill("senha-forte");
     await page.getByRole("button", { name: "Entrar", exact: true }).click();
 
-    await expect(page).toHaveURL(/\/administracao$/);
+    await expect(page).toHaveURL(/\/dashboard$/);
   });
 
   test("login inválido é neutro e campos obrigatórios funcionam", async ({ page }) => {

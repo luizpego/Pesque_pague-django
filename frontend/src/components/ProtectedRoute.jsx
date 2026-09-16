@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import Spinner from "./Spinner.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext.jsx";
  */
 export default function ProtectedRoute({ children, somenteStaff = false, papeis = null }) {
   const { estaAutenticado, carregando, ehStaffOperacional, usuario } = useAuth();
+  const location = useLocation();
 
   if (carregando) {
     return (
@@ -18,7 +19,8 @@ export default function ProtectedRoute({ children, somenteStaff = false, papeis 
   }
 
   if (!estaAutenticado) {
-    return <Navigate to="/entrar" replace />;
+    const preservarDestino = location.pathname === "/minhas-comandas" || location.pathname.startsWith("/imprimir/");
+    return <Navigate to={preservarDestino ? `/entrar?next=${encodeURIComponent(location.pathname + location.search)}` : "/entrar"} replace />;
   }
 
   if (somenteStaff && !ehStaffOperacional) {

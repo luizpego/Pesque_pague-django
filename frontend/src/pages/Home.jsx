@@ -4,12 +4,15 @@ import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import Seo from "../components/Seo.jsx";
 import { montarLinkContato } from "../utils/formatters.js";
+import "../styles/atendimento.css";
 
 export default function Home() {
   const [conteudo, setConteudo] = useState(null);
+  const [destaques, setDestaques] = useState([]);
 
   useEffect(() => {
     api.get("/conteudo-publico/").then(({ data }) => setConteudo(data)).catch(() => {});
+    api.get("/cardapio/", { params: { destaque: "true" } }).then(({ data }) => setDestaques((data.results || data).filter(p => p.destaque))).catch(() => {});
   }, []);
 
   const estabelecimento = conteudo?.estabelecimento || {};
@@ -23,7 +26,7 @@ export default function Home() {
         caminho="/"
       />
       <section className="hero">
-        <div className="hero-bg" aria-hidden="true" />
+        <div className="hero-bg" aria-hidden="true" style={estabelecimento.banner ? { backgroundImage: `url("${estabelecimento.banner}")` } : undefined} />
         <div className="hero-content">
           <span className="hero-kicker">
             <MapPin size={16} aria-hidden="true" />
@@ -31,8 +34,7 @@ export default function Home() {
           </span>
           <h1>{estabelecimento.nome || "Pesque & Pague"}</h1>
           <p>
-            Consulte o cardápio sem cadastro, conheça a estrutura dos lagos e
-            encontre as informações da sua visita em dois ambientes bem separados.
+            {estabelecimento.descricao_inicio || "Consulte o cardápio, conheça os lagos e planeje sua visita."}
           </p>
           <div className="hero-actions">
             <Link className="botao botao-primario botao-grande" to="/cardapio">
@@ -42,6 +44,7 @@ export default function Home() {
             <Link className="botao botao-claro botao-grande" to="/pesque-pague">
               Conhecer a pesca
             </Link>
+            <Link className="botao botao-claro" to="/reservar">Reservar</Link>
           </div>
           <div className="hero-proof" aria-label="Informações rápidas">
             <span>
@@ -130,11 +133,16 @@ export default function Home() {
           <h2>Monte seu pedido no celular e acerte a conta diretamente no estabelecimento.</h2>
         </div>
         <div className="operations-list">
+          <Link className="botao botao-primario" to="/minhas-comandas">Minha comanda</Link>
+          <Link className="botao botao-fantasma" to="/entrar">Acesso da equipe</Link>
           <span><ShoppingBag size={16} aria-hidden="true" />Comanda organizada</span>
           <span><Clock3 size={16} aria-hidden="true" />Acompanhamento do preparo</span>
           <span><Fish size={16} aria-hidden="true" />Pesagens separadas</span>
         </div>
       </section>
+      {(estabelecimento.descricao_piscinas || estabelecimento.descricao_atrativos) && <section className="visit-band"><div><h2>Piscinas e atrativos</h2><p>{estabelecimento.descricao_piscinas}</p><p>{estabelecimento.descricao_atrativos}</p></div></section>}
+      {!!conteudo?.galeria?.length && <section className="public-gallery" aria-label="Fotos do pesqueiro">{conteudo.galeria.map(foto => <figure key={foto.id}><img src={foto.imagem} alt={foto.imagem_alt} loading="lazy" /><figcaption>{foto.titulo}</figcaption></figure>)}</section>}
+      {destaques.length > 0 && <section className="visit-band"><h2>Destaques do cardápio</h2><div className="public-highlights">{destaques.map(p => <Link to="/cardapio" key={p.id}>{p.imagem && <img src={p.imagem} alt={p.imagem_alt || p.nome} loading="lazy" />}<strong>{p.nome}</strong><span>R$ {p.preco}</span></Link>)}</div></section>}
     </div>
   );
 }

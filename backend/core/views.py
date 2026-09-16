@@ -38,6 +38,8 @@ from .models import (
     ServicoPesca,
 )
 from .pagamentos import MercadoPagoNaoConfiguradoError, atualizar_status_pagamento, criar_pagamento_pix
+from . import atendimento as regras_atendimento
+from .gestao import AuditavelMixin
 from .permissions import (
     ComandaEhDoClienteOuStaff,
     EhAtendimentoPesca,
@@ -341,7 +343,7 @@ class ConteudoPublicoView(APIView):
         return Response(
             {
                 "estabelecimento": (
-                    ConfiguracaoEstabelecimentoSerializer(configuracao).data
+                    ConfiguracaoEstabelecimentoSerializer(configuracao, context={"request": request}).data
                     if configuracao
                     else {"nome": "Pesque & Pague"}
                 ),
@@ -368,7 +370,7 @@ class ConteudoPublicoView(APIView):
         )
 
 
-class LeituraPublicaEscritaStaffViewSet(viewsets.ModelViewSet):
+class LeituraPublicaEscritaStaffViewSet(AuditavelMixin, viewsets.ModelViewSet):
     filtro_publico = {}
 
     def get_permissions(self):
@@ -408,7 +410,7 @@ class ServicoPescaViewSet(LeituraPublicaEscritaStaffViewSet):
     filtro_publico = {"disponivel": True}
 
 
-class CategoriaCardapioViewSet(viewsets.ModelViewSet):
+class CategoriaCardapioViewSet(AuditavelMixin, viewsets.ModelViewSet):
     queryset = CategoriaCardapio.objects.all()
     serializer_class = CategoriaCardapioSerializer
 
@@ -417,7 +419,7 @@ class CategoriaCardapioViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [EhGerente()]
 
-class ItemCardapioViewSet(viewsets.ModelViewSet):
+class ItemCardapioViewSet(AuditavelMixin, viewsets.ModelViewSet):
     queryset = ItemCardapio.objects.select_related("categoria").all()
     serializer_class = ItemCardapioSerializer
 
@@ -436,10 +438,12 @@ class ItemCardapioViewSet(viewsets.ModelViewSet):
             qs = qs.filter(categoria_id=categoria_id)
         if self.request.query_params.get("disponivel") == "true":
             qs = qs.filter(disponivel=True)
+        if self.request.query_params.get("destaque") == "true":
+            qs = qs.filter(destaque=True)
         return qs
 
 
-class MesaViewSet(viewsets.ModelViewSet):
+class MesaViewSet(AuditavelMixin, viewsets.ModelViewSet):
     queryset = Mesa.objects.all()
     serializer_class = MesaSerializer
 
@@ -461,6 +465,8 @@ class ComandaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if user.papel == "cozinha" and not user.is_superuser and self.action != "alterar_status":
+            raise PermissionDenied("Use a fila de pedidos da cozinha.")
         qs = Comanda.objects.select_related("mesa", "cliente").prefetch_related("itens__item_cardapio")
         if user.is_superuser or user.is_staff_operacional:
             status_param = self.request.query_params.get("status")
@@ -472,27 +478,20 @@ class ComandaViewSet(viewsets.ModelViewSet):
     @transaction.atomic
     def perform_create(self, serializer):
         exigir_pedidos_ativos()
+        regras_atendimento.permitir(self.request.user, {"cliente", "garcom", "gerente"})
         if self.request.user.papel == Usuario.Papel.COZINHA and not self.request.user.is_superuser:
             raise PermissionDenied("A cozinha não pode abrir comandas.")
         if Comanda.objects.filter(cliente=self.request.user, status=Comanda.Status.ABERTA).exists():
             raise ValidationError("Você já possui uma comanda aberta.")
+        if not serializer.validated_data.get("mesa"):
+            raise ValidationError({"mesa": "Informe uma mesa."})
         mesa = Mesa.objects.select_for_update().get(pk=serializer.validated_data["mesa"].pk)
         if not mesa.ativa:
             raise ValidationError({"mesa": "Esta mesa está inativa."})
-        if Comanda.objects.filter(
-            mesa=mesa,
-            status__in=[
-                Comanda.Status.ABERTA,
-                Comanda.Status.ENVIADA,
-                Comanda.Status.EM_PREPARO,
-                Comanda.Status.PRONTA,
-                Comanda.Status.ENTREGUE,
-            ],
-        ).exists():
-            raise ValidationError("Esta mesa já possui uma comanda em atendimento.")
         try:
             with transaction.atomic():
-                serializer.save(cliente=self.request.user, mesa=mesa)
+                comanda = serializer.save(cliente=self.request.user, mesa=mesa, responsavel=self.request.user)
+                regras_atendimento.evento(comanda, self.request.user, "abertura", {"mesa": mesa.numero})
         except IntegrityError:
             raise ValidationError("Esta mesa ou cliente já possui uma comanda aberta.")
 
@@ -503,7 +502,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
         exigir_pedidos_ativos()
         comanda = self.get_object()
         comanda = Comanda.objects.select_for_update().get(pk=comanda.pk)
-        if comanda.status != Comanda.Status.ABERTA:
+        if comanda.status != Comanda.Status.ABERTA or comanda.pago:
             return Response(
                 {"detalhe": "Só é possível alterar uma comanda aberta."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -516,7 +515,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
                 {"quantidade": "Informe uma quantidade válida."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if quantidade <= 0 or quantidade > 100:
+        if not quantidade.is_finite() or quantidade <= 0 or quantidade > 100 or quantidade.as_tuple().exponent < -2:
             return Response(
                 {"quantidade": "A quantidade deve estar entre 0,01 e 100."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -554,6 +553,8 @@ class ComandaViewSet(viewsets.ModelViewSet):
             comanda=comanda,
             item_cardapio=item_cardapio,
             observacoes=observacoes,
+            cancelado=False,
+            pedido__isnull=True,
         ).first()
         if item_comanda and item_comanda.quantidade + quantidade > 100:
             return Response(
@@ -581,8 +582,12 @@ class ComandaViewSet(viewsets.ModelViewSet):
                 observacoes=observacoes,
                 quantidade=quantidade,
                 preco_unitario=item_cardapio.preco,
+                criado_por=request.user,
             )
 
+        regras_atendimento.evento(comanda, request.user, "item_adicionado", {
+            "produto": item_cardapio.id, "quantidade": quantidade, "preco": item_cardapio.preco,
+        })
         comanda._prefetched_objects_cache = {}
         return Response(ComandaSerializer(comanda).data, status=status.HTTP_200_OK)
 
@@ -592,12 +597,16 @@ class ComandaViewSet(viewsets.ModelViewSet):
         exigir_pedidos_ativos()
         comanda = self.get_object()
         comanda = Comanda.objects.select_for_update().get(pk=comanda.pk)
-        if comanda.status != Comanda.Status.ABERTA:
+        if comanda.status != Comanda.Status.ABERTA or comanda.pago:
             return Response(
                 {"detalhe": "Só é possível alterar uma comanda aberta."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        ItemComanda.objects.filter(pk=item_id, comanda=comanda).delete()
+        item = generics.get_object_or_404(ItemComanda, pk=item_id, comanda=comanda, cancelado=False)
+        item.cancelado = True
+        item.motivo_cancelamento = "Retirado do carrinho antes do envio"
+        item.save(update_fields=["cancelado", "motivo_cancelamento", "atualizado_em"])
+        regras_atendimento.evento(comanda, request.user, "item_cancelado", {"item": item.id, "motivo": item.motivo_cancelamento})
         comanda._prefetched_objects_cache = {}
         return Response(ComandaSerializer(comanda).data, status=status.HTTP_200_OK)
 
@@ -609,6 +618,10 @@ class ComandaViewSet(viewsets.ModelViewSet):
         comanda = self.get_object()
         comanda = Comanda.objects.select_for_update().get(pk=comanda.pk)
         novo_status = request.data.get("status")
+        if novo_status == Comanda.Status.FECHADA:
+            raise ValidationError("Use o fechamento de caixa para registrar o pagamento.")
+        if comanda.status in {Comanda.Status.ATENDIMENTO, Comanda.Status.AGUARDANDO}:
+            raise ValidationError("Use a área de atendimento para alterar esta comanda.")
         if novo_status not in dict(Comanda.Status.choices):
             raise ValidationError("Status inválido.")
 
@@ -625,16 +638,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
             motivo = str(request.data.get("motivo", "")).strip()
             if len(motivo) < 5 or len(motivo) > 500:
                 raise ValidationError({"motivo": "Informe um motivo entre 5 e 500 caracteres."})
-            comanda.status = novo_status
-            comanda.motivo_cancelamento = motivo
-            comanda.cancelada_por = user
-            comanda.cancelada_em = timezone.now()
-            comanda.save(
-                update_fields=[
-                    "status", "motivo_cancelamento", "cancelada_por",
-                    "cancelada_em", "atualizada_em",
-                ]
-            )
+            regras_atendimento.cancelar_comanda(comanda, user, motivo)
             return Response(ComandaSerializer(comanda).data, status=status.HTTP_200_OK)
 
         transicoes = {
@@ -663,8 +667,16 @@ class ComandaViewSet(viewsets.ModelViewSet):
             if (comanda.status, novo_status) not in permitidas_por_papel.get(user.papel, set()):
                 raise PermissionDenied("Seu perfil não pode executar esta mudança de status.")
 
+        if novo_status == Comanda.Status.ENVIADA:
+            regras_atendimento.enviar_rascunho(comanda, user)
+        else:
+            destino_pedido = {"em_preparo": "preparando", "pronta": "pronto", "entregue": "entregue"}[novo_status]
+            comanda.pedidos.exclude(status="cancelado").update(status=destino_pedido, atualizado_em=timezone.now())
         comanda.status = novo_status
         comanda.save(update_fields=["status", "atualizada_em"])
+        regras_atendimento.evento(comanda, user, "status_legado", {"status": novo_status})
+        if user.papel == "cozinha" and not user.is_superuser:
+            return Response({"id": comanda.pk, "status": comanda.status})
         return Response(ComandaSerializer(comanda).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
@@ -675,6 +687,7 @@ class ComandaViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("A cozinha não pode iniciar pagamentos.")
         comanda = self.get_object()
 
+        regras_atendimento.aberta(comanda)
         if comanda.pago:
             return Response(
                 {"detalhe": "Esta comanda já está paga."}, status=status.HTTP_400_BAD_REQUEST
@@ -762,6 +775,8 @@ class ItemComandaViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if user.papel == "cozinha" and not user.is_superuser:
+            raise PermissionDenied("Use a fila de pedidos da cozinha.")
         qs = ItemComanda.objects.select_related("comanda", "item_cardapio")
         if user.is_superuser or user.is_staff_operacional:
             return qs
@@ -777,13 +792,18 @@ class ItemComandaViewSet(viewsets.ModelViewSet):
             Usuario.Papel.GERENTE,
         }:
             raise PermissionDenied("Seu perfil não pode editar itens de comandas.")
-        instance = ItemComanda.objects.select_for_update().select_related("comanda").get(
+        comanda = Comanda.objects.select_for_update().get(pk=serializer.instance.comanda_id)
+        instance = ItemComanda.objects.select_related("comanda").get(
             pk=serializer.instance.pk
         )
-        if instance.comanda.status != Comanda.Status.ABERTA:
+        if comanda.status != Comanda.Status.ABERTA or comanda.pago or instance.cancelado or instance.pedido_id:
             raise ValidationError("Só é possível alterar uma comanda aberta.")
+        anterior = instance.quantidade
         serializer.instance = instance
         serializer.save()
+        regras_atendimento.evento(comanda, user, "item_alterado", {
+            "item": instance.id, "antes": anterior, "depois": instance.quantidade,
+        })
 
 
 class RegistroPescaViewSet(viewsets.ModelViewSet):

@@ -41,7 +41,7 @@ def validar_imagem_upload(arquivo):
             formato = imagem.format
             largura, altura = imagem.size
             imagem.verify()
-    except (UnidentifiedImageError, OSError, ValueError):
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
         raise serializers.ValidationError("O arquivo enviado não é uma imagem válida.")
     finally:
         arquivo.seek(0)
@@ -88,12 +88,17 @@ class ItemCardapioSerializer(serializers.ModelSerializer):
         fields = [
             "id", "categoria", "categoria_nome", "nome", "descricao", "imagem",
             "imagem_alt", "preco", "unidade", "disponivel", "eh_pescado_no_local",
-            "tempo_preparo_min",
+            "tempo_preparo_min", "destaque",
         ]
 
 
     def validate_imagem(self, value):
         return validar_imagem_upload(value)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["pode_pedir"] = instance.disponivel and (not instance.controla_estoque or instance.estoque_atual > 0)
+        return data
 
 
 class MesaSerializer(serializers.ModelSerializer):
@@ -103,8 +108,8 @@ class MesaSerializer(serializers.ModelSerializer):
 
 
 class ItemComandaSerializer(serializers.ModelSerializer):
-    item_cardapio_nome = serializers.CharField(source="item_cardapio.nome", read_only=True)
-    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    item_cardapio_nome = serializers.CharField(source="nome_registrado", read_only=True)
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = ItemComanda
@@ -133,11 +138,13 @@ class PagamentoSerializer(serializers.ModelSerializer):
 
 
 class ComandaSerializer(serializers.ModelSerializer):
-    itens = ItemComandaSerializer(many=True, read_only=True)
+    itens = serializers.SerializerMethodField()
     total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     mesa_numero = serializers.IntegerField(source="mesa.numero", read_only=True)
     cliente_nome = serializers.CharField(source="cliente.username", read_only=True)
     pagamento_atual = serializers.SerializerMethodField()
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
+    funcionario = serializers.CharField(source="responsavel.username", default="", read_only=True)
 
     class Meta:
         model = Comanda
@@ -146,10 +153,12 @@ class ComandaSerializer(serializers.ModelSerializer):
             "observacoes", "criada_em", "atualizada_em", "itens", "total",
             "pago", "pago_em", "pagamento_atual", "cancelada_em",
             "cancelada_por", "motivo_cancelamento",
+            "identificacao", "subtotal", "desconto", "acrescimo", "fechada_em", "funcionario",
         ]
         read_only_fields = [
             "cliente", "status", "pago", "pago_em", "cancelada_em",
             "cancelada_por", "motivo_cancelamento",
+            "identificacao", "desconto", "acrescimo", "fechada_em",
         ]
         extra_kwargs = {"observacoes": {"max_length": 500}}
 
@@ -157,11 +166,16 @@ class ComandaSerializer(serializers.ModelSerializer):
         pagamento = obj.pagamentos.order_by("-criado_em").first()
         return PagamentoSerializer(pagamento).data if pagamento else None
 
+    def get_itens(self, obj):
+        return ItemComandaSerializer([i for i in obj.itens.all() if not i.cancelado], many=True).data
+
 
 class ConfiguracaoEstabelecimentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfiguracaoEstabelecimento
         fields = [
+            "id", "descricao_inicio", "descricao_piscinas", "descricao_atrativos", "banner",
+            "impressora_cozinha", "papel_cozinha",
             "nome",
             "descricao_restaurante",
             "descricao_pesque_pague",
@@ -174,6 +188,9 @@ class ConfiguracaoEstabelecimentoSerializer(serializers.ModelSerializer):
             "atualizado_em",
         ]
 
+    def validate_banner(self, value):
+        return validar_imagem_upload(value) if value else value
+
 
 class HorarioFuncionamentoSerializer(serializers.ModelSerializer):
     dia_nome = serializers.CharField(source="get_dia_semana_display", read_only=True)
@@ -181,6 +198,12 @@ class HorarioFuncionamentoSerializer(serializers.ModelSerializer):
     class Meta:
         model = HorarioFuncionamento
         fields = ["id", "dia_semana", "dia_nome", "abre_as", "fecha_as", "fechado", "observacao"]
+
+    def validate(self, data):
+        fechado = data.get("fechado", getattr(self.instance, "fechado", False))
+        if not fechado and not (data.get("abre_as", getattr(self.instance, "abre_as", None)) and data.get("fecha_as", getattr(self.instance, "fecha_as", None))):
+            raise serializers.ValidationError("Informe abertura e fechamento ou marque fechado.")
+        return data
 
 
 class LagoPescaSerializer(serializers.ModelSerializer):
@@ -232,7 +255,7 @@ class ServicoPescaSerializer(serializers.ModelSerializer):
 class ImagemGaleriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImagemGaleria
-        fields = ["id", "area", "titulo", "imagem", "imagem_alt", "ordem"]
+        fields = ["id", "area", "titulo", "imagem", "imagem_alt", "ordem", "ativa"]
 
 
     def validate_imagem(self, value):
@@ -241,7 +264,7 @@ class ImagemGaleriaSerializer(serializers.ModelSerializer):
 
 class CapturaPescaSerializer(serializers.ModelSerializer):
     especie_nome = serializers.CharField(source="especie.nome", read_only=True)
-    total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
     registrado_por_nome = serializers.CharField(source="registrado_por.username", read_only=True)
 
     class Meta:
@@ -267,7 +290,7 @@ class RegistroPescaSerializer(serializers.ModelSerializer):
     status_nome = serializers.CharField(source="get_status_display", read_only=True)
     responsavel_nome = serializers.CharField(source="responsavel_entrada.username", read_only=True)
     peso_total_kg = serializers.DecimalField(max_digits=9, decimal_places=3, read_only=True)
-    total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    total = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True)
 
     class Meta:
         model = RegistroPesca
@@ -309,5 +332,6 @@ class ImpressaoDocumentoSerializer(serializers.ModelSerializer):
             "quantidade_solicitacoes",
             "gerado_em",
             "ultima_solicitacao_em",
+            "confirmado_em", "detalhe_falha",
         ]
         read_only_fields = fields

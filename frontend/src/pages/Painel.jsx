@@ -1,296 +1,78 @@
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ClipboardList, CookingPot, RefreshCcw, Scale, Search, Utensils, XCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronLeft, ChevronRight, Printer, RefreshCcw } from "lucide-react";
 import api from "../api/axios.js";
-import ConfirmDialog from "../components/ConfirmDialog.jsx";
-import EstadoVazio from "../components/EstadoVazio.jsx";
-import PageHeader from "../components/PageHeader.jsx";
-import PrintButton from "../components/PrintButton.jsx";
-import StatusBadge from "../components/StatusBadge.jsx";
-import { useToast } from "../context/ToastContext.jsx";
+import AtendimentoNav from "../components/AtendimentoNav.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import { formatadorDataHora, formatadorMoeda } from "../utils/formatters.js";
-
-const PROXIMO_STATUS_POR_PAPEL = {
-  cozinha: { enviada: "em_preparo", em_preparo: "pronta" },
-  garcom: { aberta: "enviada", pronta: "entregue", entregue: "fechada" },
-  gerente: { aberta: "enviada", enviada: "em_preparo", em_preparo: "pronta", pronta: "entregue", entregue: "fechada" },
-};
-
-const ROTULO_ACAO = {
-  enviada: "Iniciar preparo",
-  em_preparo: "Marcar como pronta",
-  pronta: "Marcar como entregue",
-  entregue: "Fechar comanda",
-};
-
-function SkeletonPainel() {
-  return (
-    <div className="dashboard-grid" aria-hidden="true">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div className="command-card" key={i}>
-          <div className="skeleton skeleton-linha" style={{ width: "50%", height: "1.4rem" }} />
-          <div className="skeleton skeleton-linha" style={{ width: "70%" }} />
-          <div className="skeleton skeleton-linha" style={{ width: "60%" }} />
-          <div className="skeleton skeleton-linha" style={{ width: "40%" }} />
-        </div>
-      ))}
-    </div>
-  );
-}
+import { ACAO, PROXIMO, STATUS_PEDIDO, erroApi, podeAvancar, useOperacao } from "../utils/atendimento.js";
+import { formatadorDataHora } from "../utils/formatters.js";
+import "../styles/atendimento.css";
 
 export default function Painel() {
-  const toast = useToast();
-  const { usuario, ehGerente } = useAuth();
-  const [comandas, setComandas] = useState([]);
-  const [carregando, setCarregando] = useState(true);
-  const [atualizandoId, setAtualizandoId] = useState(null);
+  const { usuario } = useAuth();
+  const { executar, ocupado } = useOperacao();
+  const [lista, setLista] = useState({ results: [], count: 0 });
+  const [status, setStatus] = useState("");
+  const [pagina, setPagina] = useState(1);
   const [erro, setErro] = useState("");
-  const [busca, setBusca] = useState("");
-  const [statusFiltro, setStatusFiltro] = useState("todos");
-  const [comandaParaCancelar, setComandaParaCancelar] = useState(null);
-  const [motivoCancelamento, setMotivoCancelamento] = useState("");
-  const papelOperacional = ehGerente ? "gerente" : usuario?.papel;
-
-  async function carregar(mostrarCarregando = false) {
-    if (mostrarCarregando) setCarregando(true);
-    setErro("");
+  const [carregando, setCarregando] = useState(true);
+  const [autoImpressao, setAutoImpressao] = useState(false);
+  const solicitados = useRef(new Set());
+  const carregar = useCallback(async () => {
     try {
-      const { data } = await api.get("/comandas/");
-      const lista = (data.results ?? data).filter((c) => !["cancelada", "fechada"].includes(c.status));
-      setComandas(lista);
-    } catch {
-      setErro("Não foi possível carregar as comandas.");
-      toast.erro("Não foi possível carregar as comandas.");
-    } finally {
-      setCarregando(false);
-    }
-  }
-
+      const { data } = await api.get("/atendimento/fila/", { params: { status, page: pagina } });
+      setLista(data); setErro("");
+    } catch (e) { setErro(erroApi(e)); }
+    finally { setCarregando(false); }
+  }, [status, pagina]);
   useEffect(() => {
-    carregar(true);
-    const intervalo = setInterval(() => carregar(false), 15000);
-    return () => clearInterval(intervalo);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function avancarStatus(comanda) {
-    const proximo = PROXIMO_STATUS_POR_PAPEL[papelOperacional]?.[comanda.status];
+    if (!autoImpressao) return;
+    const proximo = lista.results.find(p => p.impressao?.status === "pendente" && !solicitados.current.has(p.id));
     if (!proximo) return;
-    setAtualizandoId(comanda.id);
+    const janela = window.open(`/imprimir/atendimento/${proximo.comanda.id}?pedido=${proximo.id}&auto=1`, "cozinha-impressao");
+    if (!janela) { setErro("A janela de impressão foi bloqueada. Libere pop-ups para este site."); setAutoImpressao(false); return; }
+    solicitados.current.add(proximo.id);
+    // Uma janela por vez; o operador confirma e retorna à fila antes da próxima.
+    setAutoImpressao(false);
+  }, [autoImpressao, lista]);
+  useEffect(() => {
+    carregar();
+    const timer = setInterval(carregar, 15000);
+    return () => clearInterval(timer);
+  }, [carregar]);
+  async function avancar(pedido) {
     try {
-      await api.post(`/comandas/${comanda.id}/alterar_status/`, { status: proximo });
-      toast.sucesso(`Mesa ${comanda.mesa_numero} atualizada.`);
-      await carregar(false);
-    } catch {
-      toast.erro("Não foi possível atualizar o status.");
-    } finally {
-      setAtualizandoId(null);
-    }
-  }
-
-  async function cancelarComanda() {
-    if (!comandaParaCancelar || motivoCancelamento.trim().length < 5) return;
-    setAtualizandoId(comandaParaCancelar.id);
-    try {
-      await api.post(`/comandas/${comandaParaCancelar.id}/alterar_status/`, {
-        status: "cancelada",
-        motivo: motivoCancelamento.trim(),
+      await executar(`/atendimento/${pedido.comanda.id}/pedidos/${pedido.id}/status/`, {
+        versao: pedido.comanda.versao, status: PROXIMO[pedido.status],
       });
-      toast.sucesso(`Comanda #${comandaParaCancelar.id} cancelada com registro de auditoria.`);
-      setComandaParaCancelar(null);
-      setMotivoCancelamento("");
-      await carregar(false);
-    } catch (error) {
-      toast.erro(error.response?.data?.motivo || error.response?.data?.detalhe || "Não foi possível cancelar a comanda.");
-    } finally {
-      setAtualizandoId(null);
+      await carregar();
+    } catch (e) {
+      if (e.response?.status === 409) await carregar();
+      setErro(erroApi(e));
     }
   }
-
-  const metricas = useMemo(() => {
-    const agora = Date.now();
-    return [
-      { label: "Comandas ativas", value: comandas.length, icon: ClipboardList },
-      { label: "Pedidos novos", value: comandas.filter((c) => c.status === "enviada").length, icon: AlertTriangle },
-      { label: "Em preparo", value: comandas.filter((c) => c.status === "em_preparo").length, icon: CookingPot },
-      { label: "Prontas", value: comandas.filter((c) => c.status === "pronta").length, icon: Utensils },
-      { label: "Pendências +30 min", value: comandas.filter((c) => agora - new Date(c.atualizada_em).getTime() > 30 * 60 * 1000).length, icon: AlertTriangle },
-    ];
-  }, [comandas]);
-
-  const comandasFiltradas = useMemo(() => {
-    const termo = busca.trim().toLowerCase();
-    return comandas.filter((comanda) => {
-      const passaStatus = statusFiltro === "todos" || comanda.status === statusFiltro;
-      const passaBusca = !termo || [
-        comanda.id,
-        comanda.mesa_numero,
-        comanda.cliente_nome,
-        ...comanda.itens.map((item) => item.item_cardapio_nome),
-      ].some((valor) => String(valor || "").toLowerCase().includes(termo));
-      return passaStatus && passaBusca;
-    });
-  }, [busca, comandas, statusFiltro]);
-
-  return (
-    <div className="dashboard-page">
-      <PageHeader
-        etiqueta="Operação"
-        titulo="Painel da equipe"
-        descricao="Fila de comandas com atualização automática a cada 15 segundos."
-        acoes={
-          <div className="page-header-button-group">
-            <Link className="botao botao-secundario" to="/operacao-pesca">
-              <Scale size={16} aria-hidden="true" />
-              Operação pesca
-            </Link>
-            <button type="button" className="botao botao-fantasma" onClick={() => carregar(true)} disabled={carregando}>
-              <RefreshCcw size={16} aria-hidden="true" />
-              Atualizar
-            </button>
-          </div>
-        }
-      />
-
-      <section className="metrics-grid" aria-label="Métricas da operação">
-        {metricas.map(({ label, value, icon: Icone }) => (
-          <article className="metric-card" key={label}>
-            <Icone size={20} aria-hidden="true" />
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </article>
-        ))}
-      </section>
-
-      <div className="dashboard-toolbar">
-        <div className="search-field">
-          <Search size={18} aria-hidden="true" />
-          <label className="somente-leitor-de-tela" htmlFor="buscar-comanda">Buscar comanda</label>
-          <input
-            id="buscar-comanda"
-            type="search"
-            value={busca}
-            placeholder="Buscar mesa, cliente ou item"
-            onChange={(event) => setBusca(event.target.value)}
-          />
+  return <div className="service-page">
+    <AtendimentoNav />
+    <header className="service-heading"><h1>Fila de pedidos</h1><button className="icon-button" aria-label="Atualizar pedidos" title="Atualizar pedidos" onClick={carregar}><RefreshCcw size={18} /></button></header>
+    <div className="service-filters"><label>Status do pedido<select value={status} onChange={e => { setStatus(e.target.value); setPagina(1); }}>
+      <option value="">Pendentes</option>{Object.entries(STATUS_PEDIDO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+    </select></label><span>{lista.count} pedidos</span></div>
+    <label className="service-check"><input type="checkbox" checked={autoImpressao} onChange={e => setAutoImpressao(e.target.checked)} />Abrir próximo pedido pendente na estação de impressão</label>
+    {erro && <p role="alert" className="mensagem-erro">{erro}</p>}
+    {carregando ? <p role="status">Carregando pedidos...</p> : <div className="service-queue">
+      {lista.results.map(p => <article className="service-order" key={p.id}>
+        <header><h2>Pedido #{p.id}</h2><span className={`order-status order-${p.status}`}>{STATUS_PEDIDO[p.status]}</span></header>
+        {usuario.papel === "cozinha" && !usuario.is_superuser ? <p>Comanda #{p.comanda.id} · {p.comanda.mesa_numero ? `Mesa ${p.comanda.mesa_numero}` : p.comanda.identificacao}</p> : <Link to={`/atendimento?comanda=${p.comanda.id}`}>Comanda #{p.comanda.id} · {p.comanda.mesa_numero ? `Mesa ${p.comanda.mesa_numero}` : p.comanda.identificacao}</Link>}
+        <p className="service-small">Há {Math.max(0, Math.floor((Date.now() - new Date(p.criado_em)) / 60000))} min · Impressão: {p.impressao?.status || "pendente"}</p>
+        <p className="service-small">{formatadorDataHora.format(new Date(p.criado_em))} · {p.funcionario || "Registro anterior"}</p>
+        {p.itens.filter(i => !i.cancelado).map(i => <div className="service-order-line" key={i.id}><div><strong>{i.quantidade} × {i.item_cardapio_nome}</strong>{i.observacoes && <p className="service-kitchen-note">{i.observacoes}</p>}</div></div>)}
+        {p.status === "cancelado" && <p>{p.motivo_cancelamento}</p>}
+        <div className="service-actions"><Link className="botao botao-fantasma" to={`/imprimir/atendimento/${p.comanda.id}?pedido=${p.id}`}><Printer size={16} />Imprimir pedido</Link>
+          {podeAvancar(usuario, p.status) && <button className="botao botao-primario" disabled={ocupado} onClick={() => avancar(p)}>{ACAO[p.status]}</button>}
         </div>
-        <div className="segmented-control" role="group" aria-label="Filtrar por status">
-          {["todos", "enviada", "em_preparo", "pronta", "entregue"].map((status) => (
-            <button
-              key={status}
-              type="button"
-              aria-pressed={statusFiltro === status}
-              onClick={() => setStatusFiltro(status)}
-            >
-              {status === "todos" ? "Todos" : status.replace("_", " ")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {carregando ? (
-        <SkeletonPainel />
-      ) : erro ? (
-        <EstadoVazio
-          icone={<RefreshCcw size={36} />}
-          titulo="Painel indisponível"
-          descricao={erro}
-          acao={<button type="button" className="botao botao-primario" onClick={() => carregar(true)}>Tentar novamente</button>}
-        />
-      ) : comandasFiltradas.length === 0 ? (
-        <EstadoVazio
-          icone={<ClipboardList size={36} />}
-          titulo="Nenhuma comanda encontrada"
-          descricao="Ajuste a busca ou aguarde novos pedidos enviados pela equipe."
-        />
-      ) : (
-        <div className="dashboard-grid">
-          {comandasFiltradas.map((c) => (
-            <article className="command-card staff-command-card" key={c.id}>
-              <div className="command-card-head">
-                <div>
-                  <span className="section-kicker">Mesa {c.mesa_numero}</span>
-                  <h2>Comanda #{c.id}</h2>
-                  <p>Cliente: {c.cliente_nome || "Não identificado"}</p>
-                  <small>Aberta em {formatadorDataHora.format(new Date(c.criada_em))}</small>
-                </div>
-                <div className="badge-group">
-                  <StatusBadge status={c.status} />
-                </div>
-              </div>
-
-              <ul className="command-items">
-                {c.itens.map((item) => (
-                  <li key={item.id}>
-                    <span>
-                      {Number(item.quantidade)}x {item.item_cardapio_nome}
-                      {item.observacoes && <small>{item.observacoes}</small>}
-                    </span>
-                    <strong>{formatadorMoeda.format(item.subtotal)}</strong>
-                  </li>
-                ))}
-              </ul>
-              <p className="total-carrinho"><span>Total</span><strong>{formatadorMoeda.format(c.total)}</strong></p>
-              <div className="print-actions" aria-label={`Impressões da comanda ${c.id}`}>
-                <PrintButton origem="comanda" origemId={c.id} tipoDocumento="cozinha" rotulo="Cozinha" compacto />
-                <PrintButton origem="comanda" origemId={c.id} tipoDocumento="balcao" rotulo="Balcão" compacto />
-                <PrintButton origem="comanda" origemId={c.id} tipoDocumento="resumo_mesa" rotulo="Mesa" compacto />
-              </div>
-              <div className="page-header-button-group">
-              {PROXIMO_STATUS_POR_PAPEL[papelOperacional]?.[c.status] && (
-                <button
-                  type="button"
-                  className="botao botao-primario botao-bloco"
-                  onClick={() => avancarStatus(c)}
-                  disabled={atualizandoId === c.id}
-                >
-                  {atualizandoId === c.id ? "Atualizando..." : ROTULO_ACAO[c.status]}
-                </button>
-              )}
-              {(ehGerente || usuario?.papel === "garcom") && (
-                <button
-                  type="button"
-                  className="botao botao-perigo"
-                  onClick={() => setComandaParaCancelar(c)}
-                  disabled={atualizandoId === c.id}
-                >
-                  <XCircle size={17} aria-hidden="true" />Cancelar
-                </button>
-              )}
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-
-      <ConfirmDialog
-        aberto={Boolean(comandaParaCancelar)}
-        titulo={`Cancelar comanda #${comandaParaCancelar?.id || ""}?`}
-        descricao="O cancelamento permanece no histórico com usuário, data, itens e valores."
-        confirmarTexto="Cancelar comanda"
-        perigoso
-        carregando={atualizandoId === comandaParaCancelar?.id}
-        onConfirmar={cancelarComanda}
-        onCancelar={() => {
-          setComandaParaCancelar(null);
-          setMotivoCancelamento("");
-        }}
-      >
-        <div className="form-grupo">
-          <label htmlFor="motivo-cancelamento">Motivo do cancelamento</label>
-          <textarea
-            id="motivo-cancelamento"
-            value={motivoCancelamento}
-            minLength={5}
-            maxLength={500}
-            required
-            aria-describedby="motivo-cancelamento-ajuda"
-            onChange={(event) => setMotivoCancelamento(event.target.value)}
-          />
-          <small id="motivo-cancelamento-ajuda">Informe pelo menos 5 caracteres.</small>
-        </div>
-      </ConfirmDialog>
-    </div>
-  );
+      </article>)}
+      {!lista.results.length && <p className="service-empty">Nenhum pedido nesta fila.</p>}
+    </div>}
+    <div className="service-pagination"><span>Página {pagina}</span><button className="icon-button" aria-label="Página anterior" title="Página anterior" disabled={!lista.previous} onClick={() => setPagina(v => v - 1)}><ChevronLeft size={18} /></button><button className="icon-button" aria-label="Próxima página" title="Próxima página" disabled={!lista.next} onClick={() => setPagina(v => v + 1)}><ChevronRight size={18} /></button></div>
+  </div>;
 }

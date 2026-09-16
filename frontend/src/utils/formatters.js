@@ -10,6 +10,8 @@ export const formatadorDataHora = new Intl.DateTimeFormat("pt-BR", {
 
 export const STATUS_COMANDA = {
   aberta: "Aberta",
+  atendimento: "Em atendimento",
+  aguardando_pagamento: "Aguardando pagamento",
   enviada: "Enviada",
   em_preparo: "Em preparo",
   pronta: "Pronta",

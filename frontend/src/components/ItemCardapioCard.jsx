@@ -80,7 +80,7 @@ export default function ItemCardapioCard({
         </p>
       </div>
 
-      {podeAdicionar ? (
+      {podeAdicionar && item.pode_pedir !== false ? (
         <form onSubmit={submeter}>
           <div className="menu-card-controls">
             <QuantitySelector
@@ -107,7 +107,7 @@ export default function ItemCardapioCard({
         </form>
       ) : (
         <div className="menu-card-unavailable">
-          {linkAcao ? (
+          {item.pode_pedir === false ? <span>Indisponível</span> : linkAcao ? (
             <Link className="botao botao-secundario botao-bloco" to={linkAcao}>
               <LogIn size={17} aria-hidden="true" />
               {textoAcaoIndisponivel}

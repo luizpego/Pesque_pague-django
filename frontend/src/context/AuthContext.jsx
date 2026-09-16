@@ -92,7 +92,7 @@ export function AuthProvider({ children }) {
     carregando,
     estaAutenticado: Boolean(usuario),
     ehStaffOperacional: Boolean(
-      usuario && (usuario.is_superuser || ["garcom", "cozinha", "gerente"].includes(usuario.papel))
+      usuario && (usuario.is_superuser || ["garcom", "cozinha", "caixa", "gerente"].includes(usuario.papel))
     ),
     ehGerente: Boolean(usuario?.is_superuser || usuario?.papel === "gerente"),
     podeOperarPesca: Boolean(usuario && (usuario.is_superuser || ["garcom", "gerente"].includes(usuario.papel))),

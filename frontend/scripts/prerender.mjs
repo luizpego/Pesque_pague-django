@@ -39,6 +39,7 @@ const paginas = [
 ];
 
 const rotasAplicacao = [
+  "/atendimento", "/historico", "/registros", "/dashboard", "/estoque", "/caixa", "/mesas", "/reservar", "/imprimir/atendimento",
   "/entrar", "/cadastro", "/carrinho", "/minhas-comandas", "/painel", "/administracao",
   "/operacao-pesca", "/perfil", "/pagamento", "/imprimir/comanda", "/imprimir/pesca",
 ];
