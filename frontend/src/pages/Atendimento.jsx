@@ -201,7 +201,17 @@ function Detalhe({ id, opcoes, atualizarLista }) {
     </div>
     {erro && <p role="alert" className="mensagem-erro">{erro}</p>}
     {convite && <p className="service-invite">Link privado do cliente: <a href={convite}>{convite}</a></p>}
-    {rascunhos.length > 0 && <p className="mensagem-aviso">Há itens aguardando envio no carrinho do cliente.</p>}
+    {rascunhos.length > 0 && <section className="service-new-order" aria-label="Carrinho pendente">
+      <h2>Carrinho pendente</h2>
+      {rascunhos.map(i => <div className="service-order-line" key={i.id}>
+        <div><strong>{i.quantidade} × {i.item_cardapio_nome}</strong><p>{i.observacoes}</p></div><strong>{moeda.format(i.subtotal)}</strong>
+        {!encerrada && atende && !comanda.pago && comanda.status !== "aguardando_pagamento" && <div className="service-actions">
+          <button className="botao botao-fantasma botao-compacto" disabled={ocupado} onClick={() => setEdicao({ ...i })}>Editar item</button>
+          <button className="botao botao-fantasma botao-compacto" disabled={ocupado} onClick={() => setCancelamento({ url: `/atendimento/${id}/itens/${i.id}/cancelar/`, titulo: `Cancelar ${i.item_cardapio_nome}` })}>Cancelar item</button>
+        </div>}
+      </div>)}
+      {!encerrada && atende && !comanda.pago && comanda.status !== "aguardando_pagamento" && <button className="botao botao-primario" disabled={ocupado} onClick={() => enviar(`/atendimento/${id}/enviar_carrinho/`, { versao: comanda.versao })}>Enviar carrinho à cozinha</button>}
+    </section>}
     <div className="service-detail-columns">
       <section className="service-orders" aria-label="Pedidos da comanda">
         <h2>Pedidos ({comanda.pedidos.length})</h2>

@@ -103,6 +103,7 @@
 .service-receipt h3 { font-size: 13px; }
 .service-receipt header { text-align: center; border-bottom: 1px dashed #000; padding-bottom: 8px; margin-bottom: 8px; }
 .service-receipt p { margin: 5px 0; overflow-wrap: anywhere; }
+.service-receipt p, .service-receipt small { color: inherit; }
 .receipt-items { width: 100%; border-collapse: collapse; margin: 10px 0; table-layout: fixed; }
 .receipt-items th { text-align: left; border-block: 1px dashed #000; padding: 6px 0; }
 .receipt-items td { padding: 7px 0; vertical-align: top; overflow-wrap: anywhere; }

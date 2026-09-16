@@ -255,6 +255,27 @@ class AtendimentoViewSet(viewsets.GenericViewSet):
         regras.registrar_chave(request.user, operacao, chave, assinatura, pedido.id)
         return self.resposta(comanda.id, 201)
 
+    @action(detail=True, methods=["post"])
+    @transaction.atomic
+    def enviar_carrinho(self, request, pk=None):
+        regras.permitir(request.user, ATENDENTES | {"cliente"})
+        dados = validar(VersaoSerializer, request.data)
+        comanda = self.bloquear()
+        chave = request.headers.get("Idempotency-Key")
+        operacao = f"enviar_carrinho:{comanda.id}"
+        anterior, assinatura = regras.idempotencia(request.user, operacao, chave, dados)
+        if anterior:
+            return self.resposta(comanda.id)
+        regras.aberta(comanda)
+        regras.conferir_versao(comanda, dados["versao"])
+        if comanda.pago or comanda.status == Comanda.Status.AGUARDANDO:
+            raise ValidationError("Esta comanda já está no caixa.")
+        regras.enviar_rascunho(comanda, request.user)
+        comanda.status = Comanda.Status.ATENDIMENTO
+        comanda.save(update_fields=["status"])
+        regras.registrar_chave(request.user, operacao, chave, assinatura, comanda.id)
+        return self.resposta(comanda.id)
+
     @action(detail=True, methods=["patch"], url_path=r"itens/(?P<item_id>[0-9]+)")
     @transaction.atomic
     def alterar_item(self, request, pk=None, item_id=None):

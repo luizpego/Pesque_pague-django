@@ -6,7 +6,7 @@ from threading import Barrier
 from uuid import uuid4
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import close_old_connections
+from django.db import close_old_connections, connections
 from django.test import TransactionTestCase, override_settings, skipUnlessDBFeature
 from django.utils import timezone
 from PIL import Image
@@ -248,6 +248,19 @@ class AtendimentoTests(APITestCase):
         self.assertEqual(self.produto.estoque_atual, Decimal("10"))
         self.assertEqual(MovimentoEstoque.objects.filter(quantidade__gt=0).count(), 1)
 
+    def test_carrinho_legado_envia_pelo_atendimento_sem_duplicar_estoque(self):
+        pk = self.abrir(self.cliente)
+        self.req(f"comandas/{pk}/adicionar_item/", {"item_cardapio": self.produto.pk, "quantidade": "2"}, user=self.cliente)
+        self.pedido(pk, [{"item_cardapio": self.bebida.pk, "quantidade": "1"}], self.cliente)
+        chave = str(uuid4())
+        dados = {"versao": Comanda.objects.get(pk=pk).versao}
+        self.req(f"atendimento/{pk}/enviar_carrinho/", dados, user=self.cliente, key=chave)
+        self.req(f"atendimento/{pk}/enviar_carrinho/", dados, user=self.cliente, key=chave)
+        self.produto.refresh_from_db()
+        self.assertEqual(self.produto.estoque_atual, Decimal("8"))
+        self.assertEqual(Pedido.objects.filter(comanda_id=pk).count(), 2)
+        self.assertFalse(ItemComanda.objects.filter(comanda_id=pk, pedido__isnull=True).exists())
+
     def test_gestao_usuarios_nao_permite_escalar_privilegios(self):
         for user in [self.cliente, self.cozinha, self.garcom, self.caixa]:
             self.req("usuarios-gestao/", method="get", user=user, expected=403)
@@ -294,7 +307,7 @@ class ConcorrenciaEstoqueTests(TransactionTestCase):
                 barreira.wait(timeout=10)
                 return client.post(f"/api/atendimento/{pk}/pedidos/", {"versao": 0, "itens": [{"item_cardapio": produto.pk, "quantidade": "1"}]}, format="json", HTTP_IDEMPOTENCY_KEY=str(uuid4())).status_code
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             resultados = list(pool.map(pedir, [c.pk for c in comandas]))

@@ -149,9 +149,16 @@ test("cliente faz pedido, divide consumo e não consulta outra comanda", async (
   await page.getByLabel("Cliente ou identificação").fill("Cliente celular");
   await page.getByRole("button", { name: "Confirmar abertura" }).click();
   await expect(page.getByRole("heading", { name: /Comanda #/ })).toBeVisible();
+  const comandaCliente = new URL(page.url()).searchParams.get("comanda");
+  const produtosCliente = await (await request.get(`${API}/atendimento/opcoes/`, { headers })).json();
+  const carrinho = await request.post(`${API}/comandas/${comandaCliente}/adicionar_item/`, { headers, data: { item_cardapio: produtosCliente.produtos[0].id, quantidade: "1" } });
+  expect(carrinho.ok()).toBe(true);
+  await page.reload();
+  await page.getByRole("button", { name: "Enviar carrinho à cozinha" }).click();
+  await expect(page.getByRole("region", { name: "Carrinho pendente" })).toHaveCount(0);
   await page.locator(".service-products button").first().click();
   await page.getByRole("button", { name: "Registrar pedido", exact: true }).click();
-  await expect(page.locator(".service-orders .service-order")).toHaveCount(1);
+  await expect(page.locator(".service-orders .service-order")).toHaveCount(2);
   await page.getByText("Dividir conta", { exact: true }).click();
   await page.getByLabel("Pessoas", { exact: true }).fill("3");
   await expect(page.getByText(/Pessoa 3:/)).toBeVisible();
