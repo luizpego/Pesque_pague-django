@@ -84,9 +84,25 @@ test("venda integrada, falha de impressão, estoque, caixa e histórico", async 
   await print.getByRole("button", { name: "Imprimir pedido", exact: true }).click();
   await print.getByRole("button", { name: "Registrar falha" }).click();
   await expect(print.getByRole("status")).toContainText("Falha registrada");
+  let liberarImpressao;
+  const esperaImpressao = new Promise(resolve => { liberarImpressao = resolve; });
+  let iniciouImpressao;
+  const inicioImpressao = new Promise(resolve => { iniciouImpressao = resolve; });
+  await print.route(`**/atendimento/${id}/impressao/`, async route => {
+    iniciouImpressao();
+    await esperaImpressao;
+    await route.continue();
+  }, { times: 1 });
   await print.getByRole("button", { name: "Imprimir pedido", exact: true }).click();
+  await inicioImpressao;
+  try {
+    await expect(print.getByRole("button", { name: "Imprimir pedido", exact: true })).toBeDisabled();
+    await expect(print.getByRole("button", { name: "Confirmar papel impresso" })).toHaveCount(0);
+    await expect(print.getByRole("status")).toHaveCount(0);
+  } finally { liberarImpressao(); }
   await print.getByRole("button", { name: "Confirmar papel impresso" }).click();
   await expect(print.getByRole("status")).toContainText("confirmada pelo operador");
+  await expect(print.getByRole("alert")).toHaveCount(0);
   await print.emulateMedia({ media: "print" });
   await expect(print.locator(".site-header")).toBeHidden();
   await print.pdf({ path: testInfo.outputPath("pedido-80mm.pdf"), width: "80mm", height: "200mm", printBackground: true });
