@@ -194,7 +194,13 @@ test("admin publica conteúdo e foto, cadastra meta e confirma reserva pública"
   await expect.poll(() => foto.evaluate(img => img.complete && img.naturalWidth > 0)).toBe(true);
 
   const hoje = new Date();
-  const dataLocal = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const dataLocal = d => {
+    const partes = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(d);
+    const valor = tipo => partes.find(parte => parte.type === tipo).value;
+    return `${valor("year")}-${valor("month")}-${valor("day")}`;
+  };
   await page.goto("/administracao?area=metas");
   await page.getByRole("button", { name: "Novo", exact: true }).click();
   await page.getByLabel("Data", { exact: false }).fill(dataLocal(hoje));
@@ -202,6 +208,7 @@ test("admin publica conteúdo e foto, cadastra meta e confirma reserva pública"
   await page.getByRole("button", { name: "Salvar", exact: true }).click();
   await expect(page.locator(".admin-editor")).toHaveCount(0);
   const painel = await (await request.get(`${API}/dashboard/`, { headers })).json();
+  expect(Number(painel.meta)).toBe(5000);
   expect(Number(painel.percentual)).toBe(Number((Number(painel.vendas) / 5000 * 100).toFixed(2)));
 
   await page.evaluate(() => sessionStorage.clear());
