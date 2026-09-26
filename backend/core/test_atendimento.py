@@ -27,7 +27,8 @@ class AtendimentoTests(APITestCase):
         cls.caixa = Usuario.objects.create(username="caixa", papel="caixa")
         cls.cliente = Usuario.objects.create(username="cliente", papel="cliente")
         cls.outro = Usuario.objects.create(username="outro", papel="cliente")
-        cls.mesa = Mesa.objects.create(numero=5)
+        # A migration de cardápio/quiosques pode já ter criado esta mesa.
+        cls.mesa, _ = Mesa.objects.get_or_create(numero=5)
         categoria = CategoriaCardapio.objects.create(nome="Pratos")
         cls.produto = ItemCardapio.objects.create(categoria=categoria, nome="Peixe", preco="12.35", controla_estoque=True, estoque_atual="10")
         cls.bebida = ItemCardapio.objects.create(categoria=categoria, nome="Bebida", preco="3.20")
@@ -113,7 +114,9 @@ class AtendimentoTests(APITestCase):
         self.entregar(a)
         self.abrir_caixa()
         self.mut(a, "fechar", {"pagamentos": [{"forma": "debito", "valor": "12.35"}]})
-        mesa = self.req("atendimento/opcoes/", method="get")["mesas"][0]
+        # Há vários quiosques cadastrados: localiza o da comanda pelo id.
+        mesas = self.req("atendimento/opcoes/", method="get")["mesas"]
+        mesa = next(m for m in mesas if m["id"] == self.mesa.pk)
         self.assertTrue(mesa["ocupada"])
         self.assertEqual(mesa["comandas_abertas"], 1)
         self.assertEqual(Comanda.objects.get(pk=b).total, Decimal("6.40"))
@@ -280,9 +283,11 @@ class AtendimentoTests(APITestCase):
         bruto = BytesIO()
         Image.new("RGB", (10, 10), "green").save(bruto, "PNG")
         self.client.force_authenticate(self.admin)
+        antes = ArquivoMidia.objects.count()
         resposta = self.client.post("/api/galeria/", {"area": "piscina", "imagem_alt": "Piscina", "imagem": SimpleUploadedFile("foto.png", bruto.getvalue(), content_type="image/png")}, format="multipart")
         self.assertEqual(resposta.status_code, 201, resposta.data)
-        self.assertEqual(ArquivoMidia.objects.count(), 1)
+        # A migration de fotos do cardápio pode já ter arquivos no banco.
+        self.assertEqual(ArquivoMidia.objects.count(), antes + 1)
         self.client.force_authenticate(None)
         foto = self.client.get(resposta.data["imagem"])
         self.assertEqual(foto.status_code, 200)

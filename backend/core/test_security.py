@@ -30,8 +30,9 @@ class SecurityMatrixTests(APITestCase):
         self.gerente = Usuario.objects.create_user(
             "gerente_a", password="senha-forte-123", papel=Usuario.Papel.GERENTE
         )
-        self.mesa = Mesa.objects.create(numero=10)
-        self.outra_mesa = Mesa.objects.create(numero=11)
+        # A migration de cardápio/quiosques pode já ter criado estas mesas.
+        self.mesa, _ = Mesa.objects.get_or_create(numero=10)
+        self.outra_mesa, _ = Mesa.objects.get_or_create(numero=11)
         self.categoria = CategoriaCardapio.objects.create(nome="Testes")
         self.item = ItemCardapio.objects.create(
             categoria=self.categoria,

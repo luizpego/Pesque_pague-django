@@ -9,13 +9,12 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
-        localizacoes = ["Lago 1", "Lago 2", "Lago 3", "Deck coberto", "Varanda", "Salao principal"]
-        for i in range(1, 13):
+        for i in range(1, 16):
             Mesa.objects.get_or_create(
                 numero=i,
-                defaults={"capacidade": 4, "localizacao": localizacoes[i % len(localizacoes)]},
+                defaults={"capacidade": 6, "localizacao": f"Quiosque {i}"},
             )
-        self.stdout.write(self.style.SUCCESS("Mesas criadas."))
+        self.stdout.write(self.style.SUCCESS("Quiosques criados."))
 
         categorias_dados = [
             ("Peixes pescados", "pescaria", 1),
