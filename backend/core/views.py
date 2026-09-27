@@ -345,7 +345,7 @@ class ConteudoPublicoView(APIView):
                 "estabelecimento": (
                     ConfiguracaoEstabelecimentoSerializer(configuracao, context={"request": request}).data
                     if configuracao
-                    else {"nome": "Pesque & Pague"}
+                    else {"nome": "Clube Imperial"}
                 ),
                 "horarios": HorarioFuncionamentoSerializer(horarios, many=True).data,
                 "aberto_agora": aberto_agora,

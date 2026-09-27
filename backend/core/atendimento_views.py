@@ -409,7 +409,7 @@ class AtendimentoViewSet(viewsets.GenericViewSet):
             raise PermissionDenied("A cozinha só pode imprimir pedidos sem valores.")
         documento = AtendimentoSerializer(self.get_queryset().get(pk=pk)).data
         config = ConfiguracaoEstabelecimento.objects.first()
-        documento["estabelecimento_nome"] = config.nome if config else "Pesque & Pague"
+        documento["estabelecimento_nome"] = config.nome if config else "Clube Imperial"
         if pedido_id:
             pedido = get_object_or_404(Pedido, pk=pedido_id, comanda=comanda)
             documento["pedidos"] = [p for p in documento["pedidos"] if p["id"] == pedido.id]

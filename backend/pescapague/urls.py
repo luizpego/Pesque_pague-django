@@ -7,7 +7,7 @@ from django.conf.urls.static import static
 
 def status_api(request):
     """Endpoint simples para confirmar rapidamente que o backend está no ar."""
-    return JsonResponse({"status": "ok", "servico": "Pesque & Pague API"})
+    return JsonResponse({"status": "ok", "servico": "Clube Imperial API"})
 
 
 urlpatterns = [

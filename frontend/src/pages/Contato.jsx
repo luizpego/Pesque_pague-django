@@ -22,8 +22,8 @@ export default function Contato() {
   return (
     <div className="contact-page">
       <Seo
-        titulo="Contato e localização | Pesque & Pague"
-        descricao="Confira endereço, contato e horários de funcionamento do Pesque & Pague."
+        titulo="Contato e localização | Clube Imperial"
+        descricao="Confira endereço, contato e horários de funcionamento do Clube Imperial."
         caminho="/contato"
       />
       <PageHeader

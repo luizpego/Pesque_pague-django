@@ -106,7 +106,7 @@ export default function Cardapio() {
   return (
     <div className="catalog-page">
       <Seo
-        titulo="Cardápio | Pesque & Pague"
+        titulo="Cardápio | Clube Imperial"
         descricao="Consulte pratos, porções, bebidas, preços e disponibilidade no cardápio público."
         caminho="/cardapio"
       />

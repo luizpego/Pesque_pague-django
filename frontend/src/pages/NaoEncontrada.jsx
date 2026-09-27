@@ -7,7 +7,7 @@ export default function NaoEncontrada() {
   return (
     <>
       <Seo
-        titulo="Página não encontrada | Pesque & Pague"
+        titulo="Página não encontrada | Clube Imperial"
         descricao="A página solicitada não existe."
         caminho={window.location.pathname}
         noindex

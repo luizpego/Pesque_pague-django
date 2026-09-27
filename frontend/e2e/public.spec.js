@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 const API_URL = "http://127.0.0.1:8000/api";
 const rotasPublicas = [
-  ["/", /Pesque & Pague/i],
+  ["/", /Clube Imperial/i],
   ["/restaurante", /Comida feita/i],
   ["/cardapio", /Escolha pratos/i],
   ["/pesque-pague", /Planeje a pescaria/i],

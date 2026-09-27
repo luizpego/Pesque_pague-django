@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Utilitário de linha de comando do Django para o projeto Pesque & Pague."""
+"""Utilitário de linha de comando do Django para o projeto Clube Imperial."""
 import os
 import sys
 

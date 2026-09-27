@@ -137,7 +137,7 @@ export default function App() {
       </main>
       <footer className="rodape">
         <div>
-          <strong>Pesque &amp; Pague</strong>
+          <strong>Clube Imperial</strong>
           <span>Restaurante, pesca e atendimento no mesmo lugar.</span>
         </div>
         <span>Pagamento realizado presencialmente no estabelecimento.</span>

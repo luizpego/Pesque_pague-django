@@ -1,5 +1,5 @@
 """
-Configurações do projeto Pesque & Pague.
+Configurações do projeto Clube Imperial.
 
 Sistema de comandas para restaurante do tipo "pesque e pague".
 """

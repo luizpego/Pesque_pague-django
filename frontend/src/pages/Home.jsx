@@ -21,7 +21,7 @@ export default function Home() {
   return (
     <div className="home-page">
       <Seo
-        titulo="Pesque & Pague | Restaurante e pesca"
+        titulo="Clube Imperial | Restaurante e pesca"
         descricao="Conheça o restaurante, consulte o cardápio e planeje sua visita ao pesque-pague."
         caminho="/"
       />
@@ -32,7 +32,7 @@ export default function Home() {
             <MapPin size={16} aria-hidden="true" />
             Restaurante rural e experiência de pesca
           </span>
-          <h1>{estabelecimento.nome || "Pesque & Pague"}</h1>
+          <h1>{estabelecimento.nome || "Clube Imperial"}</h1>
           <p>
             {estabelecimento.descricao_inicio || "Consulte o cardápio, conheça os lagos e planeje sua visita."}
           </p>

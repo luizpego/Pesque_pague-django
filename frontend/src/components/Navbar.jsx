@@ -12,6 +12,7 @@ export default function Navbar() {
   const location = useLocation();
   const [menuAberto, setMenuAberto] = useState(false);
   const [menuCompacto, setMenuCompacto] = useState(false);
+  const [logoOk, setLogoOk] = useState(true);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1480px)");
@@ -42,11 +43,20 @@ export default function Navbar() {
         <div className="navbar-conteudo">
           <Link to="/" className="marca" onClick={() => setMenuAberto(false)}>
             <span className="marca-simbolo" aria-hidden="true">
-              <Fish size={22} />
+              {logoOk ? (
+                <img
+                  src="/assets/clube-imperial-logo.png"
+                  alt=""
+                  className="marca-logo"
+                  onError={() => setLogoOk(false)}
+                />
+              ) : (
+                <Fish size={22} />
+              )}
             </span>
             <span>
-              Pesque &amp; Pague
-              <small>Lago, cozinha e comanda</small>
+              Clube Imperial
+              <small>Pesque-pague e restaurante</small>
             </span>
           </Link>
 

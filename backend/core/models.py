@@ -316,7 +316,7 @@ class Pagamento(models.Model):
 class ConfiguracaoEstabelecimento(models.Model):
     """Informações públicas editáveis pelo Django Admin."""
 
-    nome = models.CharField(max_length=120, default="Pesque & Pague")
+    nome = models.CharField(max_length=120, default="Clube Imperial")
     descricao_inicio = models.TextField(blank=True)
     descricao_piscinas = models.TextField(blank=True)
     descricao_atrativos = models.TextField(blank=True)

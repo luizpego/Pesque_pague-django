@@ -24,7 +24,7 @@ export default function Restaurante() {
   return (
     <div className="restaurant-page">
       <Seo
-        titulo="Restaurante | Pesque & Pague"
+        titulo="Restaurante | Clube Imperial"
         descricao="Conheça o restaurante, consulte o cardápio público e veja as informações para sua visita."
         caminho="/restaurante"
       />

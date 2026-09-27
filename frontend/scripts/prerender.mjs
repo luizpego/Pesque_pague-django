@@ -8,19 +8,19 @@ const siteUrl = (process.env.VITE_SITE_URL || "https://pesque-pague-web.onrender
 const paginas = [
   {
     caminho: "/",
-    titulo: "Pesque & Pague | Restaurante e pesca",
+    titulo: "Clube Imperial | Restaurante e pesca",
     descricao: "Conheça o restaurante, consulte o cardápio e planeje sua visita ao pesque-pague.",
     conteudo: "Restaurante e pesque-pague em um só lugar. Consulte cardápio, horários, estrutura de pesca e informações para sua visita.",
   },
   {
     caminho: "/restaurante",
-    titulo: "Restaurante | Pesque & Pague",
+    titulo: "Restaurante | Clube Imperial",
     descricao: "Conheça o restaurante e consulte o cardápio público antes da visita.",
     conteudo: "Restaurante com pratos, porções e bebidas. Consulte preços e disponibilidade no cardápio público.",
   },
   {
     caminho: "/cardapio",
-    titulo: "Cardápio | Pesque & Pague",
+    titulo: "Cardápio | Clube Imperial",
     descricao: "Consulte pratos, porções, bebidas, preços e disponibilidade no cardápio público.",
     conteudo: "Cardápio público do restaurante com pratos, porções, bebidas, preços e disponibilidade.",
   },
@@ -32,8 +32,8 @@ const paginas = [
   },
   {
     caminho: "/contato",
-    titulo: "Contato e localização | Pesque & Pague",
-    descricao: "Confira endereço, contato e horários de funcionamento do Pesque & Pague.",
+    titulo: "Contato e localização | Clube Imperial",
+    descricao: "Confira endereço, contato e horários de funcionamento do Clube Imperial.",
     conteudo: "Contato, localização e horários de funcionamento do restaurante e pesque-pague.",
   },
 ];
@@ -65,8 +65,8 @@ for (const caminho of rotasAplicacao) {
   await mkdir(pasta, { recursive: true });
   await writeFile(resolve(pasta, "index.html"), htmlDaPagina({
     caminho,
-    titulo: "Área restrita | Pesque & Pague",
-    descricao: "Área autenticada do sistema Pesque & Pague.",
+    titulo: "Área restrita | Clube Imperial",
+    descricao: "Área autenticada do sistema Clube Imperial.",
     conteudo: "Área restrita. Entre com uma conta autorizada para continuar.",
     noindex: true,
   }));
@@ -74,7 +74,7 @@ for (const caminho of rotasAplicacao) {
 
 await writeFile(resolve(dist, "404.html"), htmlDaPagina({
   caminho: "/404",
-  titulo: "Página não encontrada | Pesque & Pague",
+  titulo: "Página não encontrada | Clube Imperial",
   descricao: "A página solicitada não existe.",
   conteudo: "Página não encontrada. Volte ao início para continuar navegando.",
   noindex: true,

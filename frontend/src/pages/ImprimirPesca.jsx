@@ -16,7 +16,7 @@ export default function ImprimirPesca() {
   const [params] = useSearchParams();
   const tipo = TIPOS[params.get("tipo")] ? params.get("tipo") : "registro_pesca";
   const [registro, setRegistro] = useState(null);
-  const [estabelecimento, setEstabelecimento] = useState({ nome: "Pesque & Pague" });
+  const [estabelecimento, setEstabelecimento] = useState({ nome: "Clube Imperial" });
   const [papel, setPapel] = useState("80");
   const [estadoImpressao, setEstadoImpressao] = useState("");
   const [erro, setErro] = useState("");
@@ -26,7 +26,7 @@ export default function ImprimirPesca() {
     Promise.all([api.get(`/registros-pesca/${id}/`), api.get("/conteudo-publico/")])
       .then(([resRegistro, resPublico]) => {
         setRegistro(resRegistro.data);
-        setEstabelecimento(resPublico.data.estabelecimento || { nome: "Pesque & Pague" });
+        setEstabelecimento(resPublico.data.estabelecimento || { nome: "Clube Imperial" });
       })
       .catch(() => setErro("Não foi possível gerar este documento."))
       .finally(() => setCarregando(false));
@@ -72,7 +72,7 @@ export default function ImprimirPesca() {
 
       <article className={`print-sheet paper-${papel}`}>
         <header className="receipt-header">
-          <strong>{estabelecimento.nome || "Pesque & Pague"}</strong>
+          <strong>{estabelecimento.nome || "Clube Imperial"}</strong>
           <h1>{TIPOS[tipo]}</h1>
           <p>Registro #{registro.id}</p>
         </header>

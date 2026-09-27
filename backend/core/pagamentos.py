@@ -41,7 +41,7 @@ def criar_pagamento_pix(comanda, usuario):
 
     dados_pagamento = {
         "transaction_amount": float(comanda.total),
-        "description": f"Comanda #{comanda.id} - Mesa {comanda.mesa.numero} - Pesque & Pague",
+        "description": f"Comanda #{comanda.id} - Mesa {comanda.mesa.numero} - Clube Imperial",
         "payment_method_id": "pix",
         "payer": {
             "email": usuario.email or f"cliente{usuario.id}@pesqueepague.com.br",

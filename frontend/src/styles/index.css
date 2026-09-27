@@ -317,6 +317,13 @@ ol {
   transform: translateY(-1px) rotate(-3deg);
 }
 
+.marca-logo {
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
 .navbar-links {
   display: flex;
   align-items: center;
@@ -578,7 +585,7 @@ ol {
   background:
     linear-gradient(90deg, rgba(12, 28, 21, 0.88) 0%, rgba(12, 28, 21, 0.7) 38%, rgba(12, 28, 21, 0.08) 74%),
     linear-gradient(180deg, rgba(12, 28, 21, 0.05), rgba(12, 28, 21, 0.42)),
-    url("/assets/pesque-pague-hero.png") center / cover;
+    url("/assets/clube-imperial-hero.jpg") center / cover;
   transform: scale(1.02);
   animation: hero-drift 18s var(--ease-standard) infinite alternate;
 }
@@ -2266,7 +2273,7 @@ body.alto-contraste .hero-bg {
   .hero-bg {
     background:
       linear-gradient(180deg, rgba(12, 28, 21, 0.86), rgba(12, 28, 21, 0.52)),
-      url("/assets/pesque-pague-hero.png") center / cover;
+      url("/assets/clube-imperial-hero.jpg") center / cover;
   }
 
   .hero-content {

@@ -75,7 +75,7 @@ export default function ImprimirAtendimento() {
     {erro && <p className="mensagem-erro" role="alert">{erro}</p>}
     {!documento && !erro && <p role="status">Carregando impressão...</p>}
     {documento && <article className={`print-sheet paper-${papel} service-receipt ${pedido ? "kitchen-receipt" : ""}`}>
-      <header><h1>{documento.estabelecimento_nome || "Pesque & Pague"}</h1>{pedido && <h2>PEDIDO #{pedido.id}</h2>}<h2>COMANDA {String(documento.id).padStart(4, "0")}</h2></header>
+      <header><h1>{documento.estabelecimento_nome || "Clube Imperial"}</h1>{pedido && <h2>PEDIDO #{pedido.id}</h2>}<h2>COMANDA {String(documento.id).padStart(4, "0")}</h2></header>
       <p>{documento.mesa_numero ? `Mesa ${documento.mesa_numero}` : "Balcão"}{documento.identificacao ? ` · ${documento.identificacao}` : ""}</p>
       {documento.cliente_nome && <p>Cliente: {documento.cliente_nome}</p>}
       <p>{dataHora.format(new Date(pedido ? pedido.criado_em : documento.criada_em))}</p>

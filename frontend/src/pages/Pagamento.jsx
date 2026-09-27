@@ -133,7 +133,7 @@ export default function Pagamento() {
 
               {pagamento.status === "approved" && (
                 <div className="mensagem-sucesso" role="status">
-                  <p>Pagamento aprovado. Obrigado pela visita ao Pesque & Pague.</p>
+                  <p>Pagamento aprovado. Obrigado pela visita ao Clube Imperial.</p>
                   <Link className="botao botao-primario" to="/minhas-comandas">
                     Ver minhas comandas
                   </Link>

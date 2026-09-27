@@ -32,7 +32,7 @@ from .models import (
 @admin.register(Usuario)
 class UsuarioAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
-        ("Pesque & Pague", {
+        ("Clube Imperial", {
             "fields": (
                 "papel", "telefone",
                 "preferencia_alto_contraste", "preferencia_fonte_grande",
