@@ -42,6 +42,7 @@ const rotasAplicacao = [
   "/atendimento", "/historico", "/registros", "/dashboard", "/estoque", "/caixa", "/mesas", "/reservar", "/imprimir/atendimento",
   "/entrar", "/cadastro", "/carrinho", "/minhas-comandas", "/painel", "/administracao",
   "/operacao-pesca", "/perfil", "/pagamento", "/imprimir/comanda", "/imprimir/pesca",
+  "/imprimir/cardapio",
 ];
 
 function htmlDaPagina({ caminho, titulo, descricao, conteudo, noindex = false }) {

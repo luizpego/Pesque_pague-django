@@ -19,6 +19,7 @@ const PesquePague = lazy(() => import("./pages/PesquePague.jsx"));
 const Perfil = lazy(() => import("./pages/Perfil.jsx"));
 const Restaurante = lazy(() => import("./pages/Restaurante.jsx"));
 const ImprimirComanda = lazy(() => import("./pages/ImprimirComanda.jsx"));
+const ImprimirCardapio = lazy(() => import("./pages/ImprimirCardapio.jsx"));
 const ImprimirPesca = lazy(() => import("./pages/ImprimirPesca.jsx"));
 const Atendimento = lazy(() => import("./pages/Atendimento.jsx"));
 const Registros = lazy(() => import("./pages/Registros.jsx"));
@@ -107,6 +108,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/imprimir/cardapio" element={<ImprimirCardapio />} />
           <Route
             path="/imprimir/comanda/:id"
             element={

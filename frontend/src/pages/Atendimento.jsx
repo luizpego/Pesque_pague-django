@@ -57,7 +57,7 @@ function NovoPedido({ produtos, comanda, enviar, ocupado }) {
     {itens.length > 0 && <form onSubmit={salvar} className="service-draft">
       {itens.map(i => <div className="service-draft-line" key={i.key}>
         <strong>{i.produto.nome}</strong>
-        <QuantitySelector value={i.quantidade} min={0.01} max={100} step={i.produto.unidade === "kg" ? 0.01 : 1} onChange={v => alterar(i.key, "quantidade", v)} label={`Quantidade de ${i.produto.nome}`} />
+        <QuantitySelector value={i.quantidade} min={i.produto.unidade === "kg" ? 0.01 : 1} max={100} step={i.produto.unidade === "kg" ? 0.01 : 1} onChange={v => alterar(i.key, "quantidade", v)} label={`Quantidade de ${i.produto.nome}`} />
         <button type="button" className="icon-button" aria-label={`Retirar ${i.produto.nome} do pedido`} title="Retirar" onClick={() => setItens(atual => atual.filter(a => a.key !== i.key))}><X size={18} /></button>
         <input aria-label={`Observações de ${i.produto.nome}`} placeholder="Observações" maxLength={200} value={i.observacoes} onChange={e => alterar(i.key, "observacoes", e.target.value)} />
       </div>)}

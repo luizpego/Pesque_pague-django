@@ -324,6 +324,74 @@ ol {
   object-fit: cover;
 }
 
+.menu-sheet {
+  color: #1c2420;
+}
+
+.menu-sheet-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  border-bottom: 3px double #1c2420;
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.menu-sheet-logo {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: contain;
+}
+
+.menu-sheet-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.menu-sheet-header p {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.menu-section {
+  break-inside: avoid;
+  margin-bottom: var(--space-5);
+}
+
+.menu-section h2 {
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: 2px solid #1c2420;
+  font-size: 1.25rem;
+}
+
+.menu-section ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.menu-section li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.menu-section li small {
+  display: block;
+  color: #4a5550;
+}
+
+.menu-section li > span {
+  white-space: nowrap;
+  font-weight: 800;
+}
+
 .navbar-links {
   display: flex;
   align-items: center;

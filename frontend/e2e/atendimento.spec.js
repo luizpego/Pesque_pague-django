@@ -189,8 +189,9 @@ test("admin publica conteúdo e foto, cadastra meta e confirma reserva pública"
   test.setTimeout(60000);
   const headers = await login(page, request, "gerente");
   await page.goto("/administracao?area=configuracao");
-  await page.getByRole("button", { name: "Novo", exact: true }).click();
-  await page.getByLabel("Nome do pesqueiro").fill("Pesque & Pague");
+  // A configuração é singleton e já existe (migration): edita em vez de criar.
+  await page.locator(".admin-record").first().getByRole("button", { name: "Editar", exact: true }).click();
+  await page.getByLabel("Nome do pesqueiro").fill("Clube Imperial");
   await page.getByLabel("Apresentação", { exact: true }).fill("Visite nosso pesqueiro. Conteúdo publicado no painel.");
   await page.getByLabel("Piscinas", { exact: true }).fill("Piscinas com área de descanso.");
   await page.getByRole("button", { name: "Salvar", exact: true }).click();

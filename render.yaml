@@ -88,6 +88,9 @@ services:
       - type: rewrite
         source: /imprimir/pesca/*
         destination: /imprimir/pesca/index.html
+      - type: rewrite
+        source: /imprimir/cardapio
+        destination: /imprimir/cardapio/index.html
     envVars:
       - key: VITE_API_URL
         value: https://pesque-pague-api.onrender.com/api

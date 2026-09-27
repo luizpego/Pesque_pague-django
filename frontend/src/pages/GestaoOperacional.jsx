@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight, RefreshCcw, Save } from "lucide-react";
 import api from "../api/axios.js";
 import AtendimentoNav from "../components/AtendimentoNav.jsx";
 import { erroApi, FORMAS, useOperacao } from "../utils/atendimento.js";
+
+function chaveIdempotencia() {
+  return crypto.randomUUID();
+}
 import { formatadorDataHora as dataHora, formatadorMoeda as moeda } from "../utils/formatters.js";
 import "../styles/atendimento.css";
 
@@ -33,11 +37,29 @@ export function Dashboard() {
 export function Mesas() {
   const [mesas, setMesas] = useState([]);
   const [erro, setErro] = useState("");
+  const [criandoAvulsa, setCriandoAvulsa] = useState(false);
+  const navigate = useNavigate();
   useEffect(() => {
     const carregar = () => api.get("/atendimento/opcoes/").then(r => setMesas(r.data.mesas)).catch(e => setErro(erroApi(e)));
     carregar(); const timer = setInterval(carregar, 15000); return () => clearInterval(timer);
   }, []);
-  return <div className="service-page"><AtendimentoNav /><header className="service-heading"><h1>Mesas e quiosques</h1><Link to="/atendimento?nova=1" className="botao botao-primario">Abrir comanda</Link></header>{erro && <p role="alert">{erro}</p>}<div className="service-queue">{mesas.map(m => <article className="service-order" key={m.id}><header><h2>Mesa {m.numero}</h2><span className={`order-status ${m.ocupada ? "order-cancelado" : "order-pronto"}`}>{m.ocupada ? "Ocupada" : "Livre"}</span></header><p>{m.localizacao}</p><p>{m.comandas_abertas || 0} comandas abertas</p><Link to={`/atendimento?nova=1&mesa=${m.id}`} className="botao botao-fantasma">Nova comanda nesta mesa</Link></article>)}</div></div>;
+  async function vendaAvulsa() {
+    setCriandoAvulsa(true);
+    setErro("");
+    try {
+      const { data } = await api.post(
+        "/atendimento/",
+        { identificacao: "Balcão" },
+        { headers: { "Idempotency-Key": chaveIdempotencia() } }
+      );
+      navigate(`/atendimento?comanda=${data.id}`);
+    } catch (e) {
+      setErro(erroApi(e));
+    } finally {
+      setCriandoAvulsa(false);
+    }
+  }
+  return <div className="service-page"><AtendimentoNav /><header className="service-heading"><h1>Mesas e quiosques</h1><div className="service-actions"><Link to="/atendimento?nova=1" className="botao botao-primario">Abrir comanda</Link><button type="button" className="botao botao-fantasma" disabled={criandoAvulsa} onClick={vendaAvulsa}>Venda avulsa (balcão)</button></div></header>{erro && <p role="alert">{erro}</p>}<div className="service-queue">{mesas.map(m => <article className="service-order" key={m.id}><header><h2>Mesa {m.numero}</h2><span className={`order-status ${m.ocupada ? "order-cancelado" : "order-pronto"}`}>{m.ocupada ? "Ocupada" : "Livre"}</span></header><p>{m.localizacao}</p><p>{m.comandas_abertas || 0} comandas abertas</p><Link to={`/atendimento?nova=1&mesa=${m.id}`} className="botao botao-fantasma">Nova comanda nesta mesa</Link></article>)}</div></div>;
 }
 
 export function Estoque() {

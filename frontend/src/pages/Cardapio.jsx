@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Fish, Search, LogIn, RefreshCcw, Table2, Utensils } from "lucide-react";
+import { Fish, Search, LogIn, Printer, RefreshCcw, Table2, Utensils } from "lucide-react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import CardapioSkeleton from "../components/CardapioSkeleton.jsx";
@@ -115,10 +115,16 @@ export default function Cardapio() {
         titulo="Escolha pratos, porções e bebidas sem precisar entrar."
         descricao="Consulte preços e disponibilidade. Para enviar um pedido, identifique-se somente na etapa da comanda."
         acoes={
-          <button type="button" className="botao botao-fantasma" onClick={carregarDados} disabled={carregando}>
-            <RefreshCcw size={16} aria-hidden="true" />
-            Atualizar
-          </button>
+          <>
+            <button type="button" className="botao botao-fantasma" onClick={carregarDados} disabled={carregando}>
+              <RefreshCcw size={16} aria-hidden="true" />
+              Atualizar
+            </button>
+            <Link className="botao botao-fantasma" to="/imprimir/cardapio">
+              <Printer size={16} aria-hidden="true" />
+              Imprimir cardápio
+            </Link>
+          </>
         }
       />
 
