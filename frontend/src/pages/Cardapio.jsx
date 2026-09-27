@@ -31,20 +31,35 @@ export default function Cardapio() {
   const [busca, setBusca] = useState("");
   const [pedidosHabilitados, setPedidosHabilitados] = useState(true);
 
+  // A API pagina de 20 em 20: busca todas as páginas para as abas
+  // por categoria filtrarem o cardápio inteiro, não só a primeira página.
+  async function buscarCardapioCompleto() {
+    const todos = [];
+    let url = "/cardapio/?disponivel=true&page_size=100";
+    for (;;) {
+      const { data } = await api.get(url);
+      todos.push(...(data.results ?? data));
+      if (!data.next) break;
+      const proxima = new URL(data.next);
+      url = proxima.pathname.replace(/^\/api/, "") + proxima.search;
+    }
+    return todos;
+  }
+
   const carregarDados = useCallback(async () => {
     setCarregando(true);
     setErro("");
     const requisicoes = [
       api.get("/categorias/"),
-      api.get("/cardapio/", { params: { disponivel: "true" } }),
+      buscarCardapioCompleto(),
       api.get("/conteudo-publico/"),
     ];
     if (estaAutenticado) requisicoes.push(api.get("/mesas/"));
 
     Promise.all(requisicoes)
-      .then(([resCategorias, resItens, resPublico, resMesas]) => {
+      .then(([resCategorias, itensCompletos, resPublico, resMesas]) => {
         setCategorias(resCategorias.data.results ?? resCategorias.data);
-        setItens(resItens.data.results ?? resItens.data);
+        setItens(itensCompletos);
         setPedidosHabilitados(resPublico.data.pedidos_habilitados !== false);
         setMesas(resMesas ? (resMesas.data.results ?? resMesas.data).filter((m) => m.ativa) : []);
       })
